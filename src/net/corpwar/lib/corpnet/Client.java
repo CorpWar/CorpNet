@@ -63,12 +63,22 @@ public class Client {
         try {
             if (clientThread == null || !clientThread.isAlive()) {
                 connection = new Connection(InetAddress.getByName(serverIP), port);
-                clientThread = new ClientThread();
-                clientThread.start();
             }
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
+    }
+
+    public void startClient() {
+        if (connection == null) {
+            try {
+                connection = new Connection(InetAddress.getByName("127.0.0.1"), 7854);
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+        }
+        clientThread = new ClientThread();
+        clientThread.start();
     }
 
     public void setProtocalVersion(int protocalVersion) {
@@ -188,6 +198,7 @@ public class Client {
                     }
                     message.setData(Arrays.copyOfRange(data, byteBufferSize, incoming.getLength()));
                     message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
+                    message.setSequenceId(byteBuffer.getInt(5));
 
                     if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA) {
                         sendAck(byteBuffer.getInt(5));

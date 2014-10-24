@@ -259,6 +259,7 @@ public class Server {
 
                     message.setData(Arrays.copyOfRange(data, byteBufferSize, incoming.getLength()));
                     message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
+                    message.setSequenceId(byteBuffer.getInt(5));
                     message.setConnectionID(clients.get(workingClient).getConnectionId());
 
                     if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA) {

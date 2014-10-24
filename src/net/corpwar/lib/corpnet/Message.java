@@ -10,6 +10,7 @@ public class Message {
 
     private byte[] data;
     private NetworkSendType networkSendType;
+    private int sequenceId;
     private UUID connectionID;
 
     public byte[] getData() {
@@ -26,6 +27,14 @@ public class Message {
 
     public void setNetworkSendType(NetworkSendType networkSendType) {
         this.networkSendType = networkSendType;
+    }
+
+    public int getSequenceId() {
+        return sequenceId;
+    }
+
+    public void setSequenceId(int sequenceId) {
+        this.sequenceId = sequenceId;
     }
 
     public UUID getConnectionID() {
