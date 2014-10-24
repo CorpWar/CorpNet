@@ -49,11 +49,12 @@ Then it first send a reliable message and then an unreliable message to the serv
 ```Java
  Client client = new Client();
  client.setPortAndIp(4567, "127.0.0.1");
+ client.startClient();
  client.sendReliableData("Send a reliable message to server".getBytes());
  client.sendUnreliableData("Send an unreliable message that maybe get to the server".getBytes());
 ```
 
-You need to make a call to setPortAndIp because in this method the thread are starte to the client. This will be rewriten so it is handled the same way as the server, first set port and ip and then start the client thread.
+Just tell where the server are and start the thread on the client that handle all the connection to the server.
 After this is setup you can easily send messages to the server.
 
 This code adds a listener to handle receiving data from the server
