@@ -3,11 +3,11 @@ CorpNet
 
 Java UDP game network librariy
 
-If you want a fast UDP network library to your multiplayer game then this one can work for you.
+If you want a fast UDP network library to your multiplayer game then this is the library for you.
 There have been some things added to normal UDP.
 
 - You can send reliable request and know that this package have been received.
-- All messages have a protocal signature so not any package can get thrue, but only correct once.
+- You need the correct id to be able to recevie packages
 - Packages have sequence number to idenify them and what order are correct if that are desirable.
  
 There are a few things that are not handled. Or should be implemented.
@@ -16,9 +16,12 @@ There are a few things that are not handled. Or should be implemented.
 - Packages can come in another order then you send them so you need to handle this in some way.
 - There are no timeout on client. If server disconnect the client don't tell.
  
+Default the package size are set to 4096 bytes. My suggestion are to keep data smaler then this and not split it into many packages.
+
+ 
 ## Staring server
 
-This code start a server on port 55433 with ip 127.0.0.1. If you have different network cards you can tell what IP it should listen on.
+This code start a server on port 55433 with ip 127.0.0.1. If you have different network cards you can tell what IP it should listen to.
 
 ```Java
   Server server = new Server();
@@ -47,10 +50,10 @@ Then it first send a reliable message and then an unreliable message to the serv
  Client client = new Client();
  client.setPortAndIp(4567, "127.0.0.1");
  client.sendReliableData("Send a reliable message to server".getBytes());
- client.sendUnreliableData("Send a unreliable message to server".getBytes());
+ client.sendUnreliableData("Send an unreliable message that maybe get to the server".getBytes());
 ```
 
-You need to make a call to setPortAndIp because in this method the thread to the client are started.
+You need to make a call to setPortAndIp because in this method the thread are starte to the client. This will be rewriten so it is handled the same way as the server, first set port and ip and then start the client thread.
 After this is setup you can easily send messages to the server.
 
 This code adds a listener to handle receiving data from the server
@@ -64,4 +67,4 @@ This code adds a listener to handle receiving data from the server
 ```
 
 ## Other great network libraries
-If you looking for a good TCP and UDP library I strongly suggest [KryoNet](https://github.com/EsotericSoftware/kryonet). You can easy transfur objects over the net with this library.
+If you looking for a good TCP and UDP library I strongly suggest [KryoNet](https://github.com/EsotericSoftware/kryonet). You can easily transfur objects over the net with this library.
