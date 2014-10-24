@@ -3,9 +3,68 @@ CorpNet
 
 Java UDP game network librariy
 
-If you need a simple network library to send data in your game then you can use this. It can send both reliable and unreliable data.
+If you want a fast UDP network library to your multiplayer game then this is the library for you.
+There have been some things added to normal UDP.
 
-It use only UDP so you only need to open one port.
-So far there are some restriction to it. You can't tell in what order things will come, they might come out of order.
-If you need to split reliable data in more packaged you need to manage that they are coming in the correct order.
-There are no flow controll so don't send to much data to fast, then you can kill the server or a client.
+- You can send reliable request and know that this package have been received.
+- You need the correct id to be able to recevie packages
+- Packages have sequence number to idenify them and what order are correct if that are desirable.
+ 
+There are a few things that are not handled. Or should be implemented.
+
+- There are no flow controll so if you send to many packages you might flood the connection.
+- Packages can come in another order then you send them so you need to handle this in some way.
+- There are no timeout on client. If server disconnect the client don't tell.
+ 
+Default the package size are set to 4096 bytes. My suggestion are to keep data smaler then this and not split it into many packages.
+
+ 
+## Staring server
+
+This code start a server on port 55433 with ip 127.0.0.1. If you have different network cards you can tell what IP it should listen to.
+
+```Java
+  Server server = new Server();
+  server.setPortAndIp(55433, "127.0.0.1");
+  server.startServer();
+```
+
+The startServer method will start a new thread and handle all incoming traffic in that thread.
+Default it will listen on port 7854 and 127.0.0.1 if you don't set port and ip.
+
+This code adds a listener to handle receiving data from clients
+```Java
+  server.registerServerListerner(new DataReceivedListener() {
+      public void recivedMessage(Message message) {
+        byte[] data = message.getData();
+        ...
+      }
+  });
+```
+
+## Connect client to server
+
+This code start a client and connect it to the server on port 55433 with ip 127.0.0.1.
+Then it first send a reliable message and then an unreliable message to the server.
+```Java
+ Client client = new Client();
+ client.setPortAndIp(4567, "127.0.0.1");
+ client.sendReliableData("Send a reliable message to server".getBytes());
+ client.sendUnreliableData("Send an unreliable message that maybe get to the server".getBytes());
+```
+
+You need to make a call to setPortAndIp because in this method the thread are starte to the client. This will be rewriten so it is handled the same way as the server, first set port and ip and then start the client thread.
+After this is setup you can easily send messages to the server.
+
+This code adds a listener to handle receiving data from the server
+```Java
+ client.registerClientListerner(new DataReceivedListener() {
+      public void recivedMessage(Message message) {
+       byte[] data = message.getData();
+        ...
+      }
+  });
+```
+
+## Other great network libraries
+If you looking for a good TCP and UDP library I strongly suggest [KryoNet](https://github.com/EsotericSoftware/kryonet). You can easily transfur objects over the net with this library.
