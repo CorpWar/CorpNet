@@ -1,3 +1,21 @@
+/**************************************************************************
+ * CorpNet
+ * Copyright (C) 2014 Daniel Ekedahl
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ **************************************************************************/
 package net.corpwar.lib.corpnet;
 
 import java.io.IOException;
@@ -6,11 +24,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
-/**
- * GhostNet
- * Created by Ghost on 2014-10-05.
- */
+
 public class Server {
 
     // The name of the protocol version, to sort out incorrect package
@@ -39,7 +55,7 @@ public class Server {
     // Ip the server will listen on
     private String ipAdress = "127.0.0.1";
 
-    // How many concurrent connection the server can handle
+    // How many concurrent connection the server can handle default is 8
     private int maxConnections;
 
     private byte[] buffer = new byte[BUFFER_SIZE];
@@ -55,7 +71,7 @@ public class Server {
 
 
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
-    private Message message = new Message();
+    private final Message message = new Message();
 
     private final SizedStack<Long> pingTime = new SizedStack<>(15);
     private long lastPingTime;
@@ -76,12 +92,6 @@ public class Server {
 
     public void registerServerListerner(DataReceivedListener dataReceivedListener) {
         dataReceivedListeners.add(dataReceivedListener);
-    }
-
-    public void recivedMessage() {
-        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
-            dataReceivedListener.recivedMessage(message);
-        }
     }
 
     public void setPortAndIp(int port, String ipAdress) {
@@ -168,6 +178,7 @@ public class Server {
             for (int i = clients.size() - 1; i >= 0; i--) {
                 Connection connection = clients.get(i);
                 if ((currentTime - connection.getLastRecived()) > milisecoundToTimeout) {
+                    disconnectedClients(connection.getConnectionId());
                     clients.remove(i);
                 }
             }
@@ -197,6 +208,18 @@ public class Server {
             datagramSocket.send(dp);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void recivedMessage(Message message) {
+        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
+            dataReceivedListener.recivedMessage(message);
+        }
+    }
+
+    private void disconnectedClients(UUID clientId) {
+        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
+            dataReceivedListener.disconnected(clientId);
         }
     }
 
@@ -266,10 +289,9 @@ public class Server {
                         sendAck(tempConnection, byteBuffer.getInt(5));
                     }
 
-                    recivedMessage();
                     clients.get(workingClient).updateTime();
                     removeInactiveClients();
-
+                    recivedMessage(message);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

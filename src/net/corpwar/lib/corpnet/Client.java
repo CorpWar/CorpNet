@@ -1,3 +1,21 @@
+/**************************************************************************
+ * CorpNet
+ * Copyright (C) 2014 Daniel Ekedahl
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ **************************************************************************/
 package net.corpwar.lib.corpnet;
 
 import java.io.IOException;
@@ -5,11 +23,9 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.UUID;
 
-/**
- * CorpNet
- * Created by Ghost on 2014-10-05.
- */
+
 public class Client {
 
     //The name of the protocol version, to sort out incorrect package
@@ -29,12 +45,16 @@ public class Client {
     // How long time in milliseconds it must pass before we try to resend data
     private long milisecoundsBetweenResend = 100;
 
+    // How long time in milliseconds it must pass before a disconnect
+    private long milisecoundToTimeout = 20000;
+
     private Connection connection;
     private DatagramSocket sock = null;
     private DatagramPacket dp;
     private byte[] sendData;
     private boolean running = true;
     private ClientThread clientThread;
+    private long lastReceivedPackageTime;
     private NetworkPackage sendingPackage;
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
     private Message message = new Message();
@@ -51,12 +71,6 @@ public class Client {
 
     public void registerClientListerner(DataReceivedListener dataReceivedListener) {
         dataReceivedListeners.add(dataReceivedListener);
-    }
-
-    public void recivedMessage() {
-        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
-            dataReceivedListener.recivedMessage(message);
-        }
     }
 
     public void setPortAndIp(int port, String serverIP) {
@@ -79,6 +93,7 @@ public class Client {
         }
         clientThread = new ClientThread();
         clientThread.start();
+        lastReceivedPackageTime = System.currentTimeMillis();
     }
 
     public void setProtocalVersion(int protocalVersion) {
@@ -127,11 +142,33 @@ public class Client {
         }
     }
 
+    public void disconnectInactiveServer() {
+        if (clientThread != null && clientThread.isAlive()) {
+            long currentTime = System.currentTimeMillis();
+            if (currentTime > milisecoundToTimeout + lastReceivedPackageTime) {
+                disconnectedClients(connection.getConnectionId());
+                killConnection();
+            }
+        }
+    }
+
     public void killConnection() {
         if (clientThread.isAlive()) {
             running = false;
             sock.close();
             clientThread.interrupt();
+        }
+    }
+
+    private void recivedMessage(Message message) {
+        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
+            dataReceivedListener.recivedMessage(message);
+        }
+    }
+
+    private void disconnectedClients(UUID clientId) {
+        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
+            dataReceivedListener.disconnected(clientId);
         }
     }
 
@@ -204,7 +241,7 @@ public class Client {
                         sendAck(byteBuffer.getInt(5));
                     }
 
-                    recivedMessage();
+                    recivedMessage(message);
                     connection.updateTime();
                 } catch (IOException e) {
                     e.printStackTrace();
