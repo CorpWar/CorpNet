@@ -143,6 +143,14 @@ public class Client {
         this.milisecoundsBetweenResend = milisecoundsBetweenResend;
     }
 
+    /**
+     * How long it should wait before it disconnect from server if no packages are received
+     * @param milisecoundToTimeout
+     */
+    public void setMilisecoundToTimeout(long milisecoundToTimeout) {
+        this.milisecoundToTimeout = milisecoundToTimeout;
+    }
+
     public void sendPing() {
         sendData(new byte[0], NetworkSendType.PING);
     }

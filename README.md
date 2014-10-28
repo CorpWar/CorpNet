@@ -16,12 +16,12 @@ There are a few things that are not handled. Or should be implemented.
 - Packages can come in another order then you send them so you need to handle this in some way.
 - There are no timeout on client. If server disconnect the client don't tell.
  
-Default the package size are set to 4096 bytes. If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
+Default max package size are set to 4096 bytes. If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
 
  
-## Staring server
+## Starting server
 
 This code start a server on port 55433 with ip 127.0.0.1. If you have different network cards you can tell what IP it should listen to.
 
@@ -79,4 +79,4 @@ TestSerialization returnObj = SerializationUtils.getInstance().deserialize(testB
 ```
 
 ## Other great network libraries
-If you looking for a good TCP and UDP library I strongly suggest [KryoNet](https://github.com/EsotericSoftware/kryonet).
+If you looking for a good TCP and UDP library I suggest [KryoNet](https://github.com/EsotericSoftware/kryonet).

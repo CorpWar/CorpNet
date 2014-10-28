@@ -100,6 +100,20 @@ public class Server {
     }
 
     /**
+     * Return connection from uuid
+     * @param uuid
+     * @return
+     */
+    public Connection getConnectionFromUUID(UUID uuid) {
+        for (int i = clients.size() - 1; i >= 0; i--) {
+            if (clients.get(i).getConnectionId().equals(uuid)) {
+                return clients.get(i);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Register server listener
      * @param dataReceivedListener
      */
