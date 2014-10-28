@@ -22,6 +22,9 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.UUID;
 
+/**
+ * Handle every connection so we can send data correct
+ */
 public class Connection {
 
     // ID that identify the connection instead of address and port

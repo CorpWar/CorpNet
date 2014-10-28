@@ -20,11 +20,21 @@ package net.corpwar.lib.corpnet;
 
 import java.util.UUID;
 
+/**
+ * Receiving message with data, who sent, sequence number and what kind of network type
+ */
 public class Message {
 
+    // The data that was received
     private byte[] data;
+
+    // Network type that was sent
     private NetworkSendType networkSendType;
+
+    // Sequence id of message
     private int sequenceId;
+
+    // connection id
     private UUID connectionID;
 
     public byte[] getData() {

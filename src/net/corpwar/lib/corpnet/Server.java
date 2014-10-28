@@ -76,12 +76,21 @@ public class Server {
     private final SizedStack<Long> pingTime = new SizedStack<>(15);
     private long lastPingTime;
 
+    /**
+     * Create new server on port 7854 on localhost with max 8 connections
+     */
     public Server() {
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
         clients = new ArrayList<>(8);
         maxConnections = 8;
     }
 
+    /**
+     * Create new server and set port, ip to liston on and max connections
+     * @param port
+     * @param ipAdress
+     * @param maxConnections
+     */
     public Server(int port, String ipAdress, int maxConnections) {
         this.port = port;
         this.ipAdress = ipAdress;
@@ -90,31 +99,60 @@ public class Server {
         this.maxConnections = maxConnections;
     }
 
+    /**
+     * Register server listener
+     * @param dataReceivedListener
+     */
     public void registerServerListerner(DataReceivedListener dataReceivedListener) {
         dataReceivedListeners.add(dataReceivedListener);
     }
 
+    /**
+     * Change the port and ip the server should listen on
+     * @param port
+     * @param ipAdress
+     */
     public void setPortAndIp(int port, String ipAdress) {
         this.port = port;
         this.ipAdress = ipAdress;
     }
 
+    /**
+     * OBS! Must be same on both client and server
+     * @param protocalVersion
+     */
     public void setProtocalVersion(int protocalVersion) {
         this.protocalVersion = protocalVersion;
     }
 
+    /**
+     * How long should server wait before it resend a message. Default are 100 milliseconds
+     * @param milisecoundsBetweenResend
+     */
     public void setMilisecoundsBetweenResend(long milisecoundsBetweenResend) {
         this.milisecoundsBetweenResend = milisecoundsBetweenResend;
     }
 
+    /**
+     * How long the server should wait for a message from a client before it disconnect the client. Default are 20000 milliseconds
+     * @param milisecoundToTimeout
+     */
     public void setMilisecoundToTimeout(long milisecoundToTimeout) {
         this.milisecoundToTimeout = milisecoundToTimeout;
     }
 
+    /**
+     * Set how many connections the server can have
+     * @param maxConnections
+     */
     public void setMaxConnections(int maxConnections) {
         this.maxConnections = maxConnections;
     }
 
+    /**
+     * The last 15 package times in milli-seconds
+     * @return
+     */
     public SizedStack<Long> getPingTime() {
         return pingTime;
     }
@@ -123,6 +161,9 @@ public class Server {
         return lastPingTime;
     }
 
+    /**
+     * Start server if it's not running
+     */
     public void startServer() {
         if (serverThread == null || !serverThread.isAlive()) {
             running = true;
@@ -131,6 +172,9 @@ public class Server {
         }
     }
 
+    /**
+     * Kill the server if it's running
+     */
     public void killServer() {
         if (serverThread.isAlive() ) {
             running = false;
@@ -139,18 +183,29 @@ public class Server {
         }
     }
 
+    /**
+     * Use this if you don't care if the message get to the client
+     * @param dataToSend
+     */
     public void sendUnreliableToAllClients(byte[] dataToSend) {
         for (int i = clients.size() - 1; i >= 0; i--) {
             sendData(clients.get(i), dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
         }
     }
 
+    /**
+     * Use this if it is rely important the message get to the client
+     * @param dataToSend
+     */
     public void sendReliableToAllClients(byte[] dataToSend) {
         for (int i = clients.size() - 1; i >= 0; i--) {
             sendData(clients.get(i), dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
         }
     }
 
+    /**
+     * You can trigger the resend method just to tell it to send messages that have reached the max limits of a message
+     */
     public void resendData() {
         long currentTime = System.currentTimeMillis();
         for (int i = clients.size() - 1; i >= 0; i--) {
@@ -172,6 +227,9 @@ public class Server {
         }
     }
 
+    /**
+     * Remove clients that haven't send a message for some time
+     */
     public void removeInactiveClients() {
         if (serverThread != null && serverThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
@@ -185,6 +243,12 @@ public class Server {
         }
     }
 
+    /**
+     * Send a message to a specific client
+     * @param connection
+     * @param data
+     * @param sendType
+     */
     public void sendData(Connection connection, byte[] data, NetworkSendType sendType) {
         try {
             ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);

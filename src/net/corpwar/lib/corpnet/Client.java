@@ -61,6 +61,9 @@ public class Client {
     private final SizedStack<Long> pingTime = new SizedStack<>(15);
     private long lastPingTime;
 
+    /**
+     * Create new client
+     */
     public Client() {
         try {
             sock = new DatagramSocket();
@@ -69,10 +72,35 @@ public class Client {
         }
     }
 
+    /**
+     * Create new client and set port and ip to server
+     * @param port
+     * @param serverIP
+     */
+    public Client(int port, String serverIP) {
+        try {
+            sock = new DatagramSocket();
+            if (clientThread == null || !clientThread.isAlive()) {
+                connection = new Connection(InetAddress.getByName(serverIP), port);
+            }
+        } catch (SocketException | UnknownHostException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Register client listener
+     * @param dataReceivedListener
+     */
     public void registerClientListerner(DataReceivedListener dataReceivedListener) {
         dataReceivedListeners.add(dataReceivedListener);
     }
 
+    /**
+     * Change port and ip the client should connect to
+     * @param port
+     * @param serverIP
+     */
     public void setPortAndIp(int port, String serverIP) {
         try {
             if (clientThread == null || !clientThread.isAlive()) {
@@ -83,6 +111,9 @@ public class Client {
         }
     }
 
+    /**
+     * Start client, if no port and ip have been specified it will use localhost address and 7854 as port
+     */
     public void startClient() {
         if (connection == null) {
             try {
@@ -96,10 +127,18 @@ public class Client {
         lastReceivedPackageTime = System.currentTimeMillis();
     }
 
+    /**
+     * OBS! Must be same on both client and server
+     * @param protocalVersion
+     */
     public void setProtocalVersion(int protocalVersion) {
         this.protocalVersion = protocalVersion;
     }
 
+    /**
+     * How long should the client wait for ack before it resend a message
+     * @param milisecoundsBetweenResend
+     */
     public void setMilisecoundsBetweenResend(long milisecoundsBetweenResend) {
         this.milisecoundsBetweenResend = milisecoundsBetweenResend;
     }
@@ -108,6 +147,10 @@ public class Client {
         sendData(new byte[0], NetworkSendType.PING);
     }
 
+    /**
+     * The last 15 package times in milli-seconds
+     * @return
+     */
     public SizedStack<Long> getPingTime() {
         return pingTime;
     }
@@ -116,14 +159,25 @@ public class Client {
         return lastPingTime;
     }
 
+    /**
+     * Use this if you don't care if the message get to the server
+     * @param sendData
+     */
     public void sendUnreliableData(byte[] sendData) {
         sendData(sendData, NetworkSendType.UNRELIABLE_GAME_DATA);
     }
 
+    /**
+     * Use this if it is rely important the message get to the server
+     * @param sendData
+     */
     public void sendReliableData(byte[] sendData) {
         sendData(sendData, NetworkSendType.RELIABLE_GAME_DATA);
     }
 
+    /**
+     * You can trigger the resend method just to tell it to send messages that have reached the max limits of a message
+     */
     public void resendData() {
         long currentTime = System.currentTimeMillis();
         for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
@@ -142,6 +196,9 @@ public class Client {
         }
     }
 
+    /**
+     * Check if the server have been disconnected
+     */
     public void disconnectInactiveServer() {
         if (clientThread != null && clientThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
@@ -152,6 +209,9 @@ public class Client {
         }
     }
 
+    /**
+     * If you want to terminate the connection between client and server
+     */
     public void killConnection() {
         if (clientThread.isAlive()) {
             running = false;
