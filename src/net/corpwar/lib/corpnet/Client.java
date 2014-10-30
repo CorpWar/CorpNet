@@ -43,10 +43,13 @@ public class Client {
     private int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
-    private long milisecoundsBetweenResend = 100;
+    private long millisecondsBetweenResend = 100;
 
     // How long time in milliseconds it must pass before a disconnect
-    private long milisecoundToTimeout = 20000;
+    private long millisecondToTimeout = 20000;
+
+    // How long it should wait between every check for disconnect and resend data. This should be lower or same as millisecondsBetweenResend
+    private long millisecondsToRecheckConnection = 20;
 
     private Connection connection;
     private DatagramSocket sock = null;
@@ -54,6 +57,7 @@ public class Client {
     private byte[] sendData;
     private boolean running = true;
     private ClientThread clientThread;
+    private HandleConnection handleConnection = new HandleConnection();
     private long lastReceivedPackageTime;
     private NetworkPackage sendingPackage;
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
@@ -122,8 +126,10 @@ public class Client {
                 e.printStackTrace();
             }
         }
+        running = true;
         clientThread = new ClientThread();
         clientThread.start();
+        handleConnection.start();
         lastReceivedPackageTime = System.currentTimeMillis();
     }
 
@@ -137,18 +143,27 @@ public class Client {
 
     /**
      * How long should the client wait for ack before it resend a message
-     * @param milisecoundsBetweenResend
+     * @param millisecondsBetweenResend
      */
-    public void setMilisecoundsBetweenResend(long milisecoundsBetweenResend) {
-        this.milisecoundsBetweenResend = milisecoundsBetweenResend;
+    public void setMillisecondsBetweenResend(long millisecondsBetweenResend) {
+        this.millisecondsBetweenResend = millisecondsBetweenResend;
     }
 
     /**
      * How long it should wait before it disconnect from server if no packages are received
-     * @param milisecoundToTimeout
+     * @param millisecondToTimeout
      */
-    public void setMilisecoundToTimeout(long milisecoundToTimeout) {
-        this.milisecoundToTimeout = milisecoundToTimeout;
+    public void setMillisecondToTimeout(long millisecondToTimeout) {
+        this.millisecondToTimeout = millisecondToTimeout;
+    }
+
+    /**
+     * How long it should wait between every check for disconnect and resend data
+     * Default are 20 milliseconds
+     * @param millisecondsToRecheckConnection
+     */
+    public void setMillisecondsToRecheckConnection(long millisecondsToRecheckConnection) {
+        this.millisecondsToRecheckConnection = millisecondsToRecheckConnection;
     }
 
     public void sendPing() {
@@ -186,10 +201,10 @@ public class Client {
     /**
      * You can trigger the resend method just to tell it to send messages that have reached the max limits of a message
      */
-    public void resendData() {
+    public synchronized void resendData() {
         long currentTime = System.currentTimeMillis();
         for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
-            if ((currentTime - networkPackage.getSentTime() - milisecoundsBetweenResend) > 0) {
+            if ((currentTime - networkPackage.getSentTime() - millisecondsBetweenResend) > 0) {
                 try {
                     ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
                     byteBuffer.putInt(protocalVersion).put((byte) NetworkSendType.RELIABLE_GAME_DATA.getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
@@ -207,10 +222,10 @@ public class Client {
     /**
      * Check if the server have been disconnected
      */
-    public void disconnectInactiveServer() {
+    public synchronized void disconnectInactiveServer() {
         if (clientThread != null && clientThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
-            if (currentTime > milisecoundToTimeout + lastReceivedPackageTime) {
+            if (currentTime > millisecondToTimeout + lastReceivedPackageTime) {
                 disconnectedClients(connection.getConnectionId());
                 killConnection();
             }
@@ -324,6 +339,22 @@ public class Client {
                 getPingTime().push(pingTime);
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     lastPingTime = pingTime;
+                }
+            }
+        }
+    }
+
+    private class HandleConnection extends Thread {
+
+        @Override
+        public void run() {
+            while (running) {
+                resendData();
+                disconnectInactiveServer();
+                try {
+                    Thread.sleep(millisecondsToRecheckConnection);
+                } catch (InterruptedException e) {
+                    // Ignore error
                 }
             }
         }

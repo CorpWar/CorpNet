@@ -49,6 +49,9 @@ public class Server {
     // How long time in milliseconds it must pass before a disconnect
     private long milisecoundToTimeout = 20000;
 
+    // How long it should wait between every check for disconnect and resend data. This should be lower or same as millisecondsBetweenResend
+    private long millisecondsToRecheckConnection = 20;
+
     // Port the server will liston on
     private int port = 7854;
 
@@ -68,6 +71,7 @@ public class Server {
     private ServerThread serverThread;
     private List<Connection> clients;
     private Connection tempConnection = new Connection();
+    private HandleConnection handleConnection = new HandleConnection();
 
 
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
@@ -156,6 +160,15 @@ public class Server {
     }
 
     /**
+     * How long it should wait between every check for disconnect and resend data
+     * Default are 20 milliseconds
+     * @param millisecondsToRecheckConnection
+     */
+    public void setMillisecondsToRecheckConnection(long millisecondsToRecheckConnection) {
+        this.millisecondsToRecheckConnection = millisecondsToRecheckConnection;
+    }
+
+    /**
      * Set how many connections the server can have
      * @param maxConnections
      */
@@ -183,6 +196,9 @@ public class Server {
             running = true;
             serverThread = new ServerThread();
             serverThread.start();
+        }
+        if (!handleConnection.isAlive()) {
+            handleConnection.start();
         }
     }
 
@@ -220,7 +236,7 @@ public class Server {
     /**
      * You can trigger the resend method just to tell it to send messages that have reached the max limits of a message
      */
-    public void resendData() {
+    public synchronized void resendData() {
         long currentTime = System.currentTimeMillis();
         for (int i = clients.size() - 1; i >= 0; i--) {
             Connection connection = clients.get(i);
@@ -244,7 +260,7 @@ public class Server {
     /**
      * Remove clients that haven't send a message for some time
      */
-    public void removeInactiveClients() {
+    public synchronized void removeInactiveClients() {
         if (serverThread != null && serverThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
             for (int i = clients.size() - 1; i >= 0; i--) {
@@ -383,6 +399,22 @@ public class Server {
                 getPingTime().push(pingTime);
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     lastPingTime = pingTime;
+                }
+            }
+        }
+    }
+
+    private class HandleConnection extends Thread {
+
+        @Override
+        public void run() {
+            while (running) {
+                resendData();
+                removeInactiveClients();
+                try {
+                    Thread.sleep(millisecondsToRecheckConnection);
+                } catch (InterruptedException e) {
+                    // Ignore error
                 }
             }
         }

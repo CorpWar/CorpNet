@@ -12,10 +12,9 @@ There have been some things added to normal UDP.
  
 There are a few things that are not handled. Or should be implemented.
 
-- There are no flow controll so if you send to many packages you might flood the connection.
-- Packages can come in another order then you send them so you need to handle this in some way.
-- There are no timeout on client. If server disconnect the client don't tell.
- 
+- There are no flow control so if you send to many packages you might flood the connection.
+- Packages can come in another order then you send them, if this is a problem you have to deal with it your self.
+
 Default max package size are set to 4096 bytes. If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
