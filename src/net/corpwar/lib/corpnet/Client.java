@@ -58,7 +58,6 @@ public class Client {
     private boolean running = true;
     private ClientThread clientThread;
     private HandleConnection handleConnection = new HandleConnection();
-    private long lastReceivedPackageTime;
     private NetworkPackage sendingPackage;
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
     private Message message = new Message();
@@ -126,11 +125,11 @@ public class Client {
                 e.printStackTrace();
             }
         }
+        connection.updateTime();
         running = true;
         clientThread = new ClientThread();
         clientThread.start();
         handleConnection.start();
-        lastReceivedPackageTime = System.currentTimeMillis();
     }
 
     /**
@@ -225,7 +224,7 @@ public class Client {
     public synchronized void disconnectInactiveServer() {
         if (clientThread != null && clientThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
-            if (currentTime > millisecondToTimeout + lastReceivedPackageTime) {
+            if (currentTime > millisecondToTimeout + connection.getLastRecived()) {
                 disconnectedClients(connection.getConnectionId());
                 killConnection();
             }

@@ -20,7 +20,9 @@ package net.corpwar.lib.corpnet;
 
 import java.net.InetAddress;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Handle every connection so we can send data correct
@@ -43,7 +45,7 @@ public class Connection {
     private Integer localSequenceNumber = 1;
 
     // The last sent packages that waiting for ack
-    private HashMap<Integer, NetworkPackage> networkPackageArrayMap = new HashMap<>(100);
+    private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<>(100);
 
     public Connection() {}
 
@@ -101,7 +103,7 @@ public class Connection {
         return getLastSequenceNumber(new byte[0], NetworkSendType.UNRELIABLE_GAME_DATA);
     }
 
-    public HashMap<Integer, NetworkPackage> getNetworkPackageArrayMap() {
+    public Map<Integer, NetworkPackage> getNetworkPackageArrayMap() {
         return networkPackageArrayMap;
     }
 

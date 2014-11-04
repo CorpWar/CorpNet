@@ -384,7 +384,6 @@ public class Server {
                     }
 
                     clients.get(workingClient).updateTime();
-                    removeInactiveClients();
                     recivedMessage(message);
                 } catch (IOException e) {
                     e.printStackTrace();
