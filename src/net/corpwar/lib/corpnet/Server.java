@@ -247,7 +247,7 @@ public class Server {
         for (int i = clients.size() - 1; i >= 0; i--) {
             Connection connection = clients.get(i);
             for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
-                if ((currentTime - networkPackage.getSentTime() - Math.max(milisecoundsBetweenResend, connection.getSmoothRoundTripTime())) > 0) {
+                if ((currentTime - networkPackage.getSentTime() - Math.max(milisecoundsBetweenResend, connection.getSmoothRoundTripTime() * 1.1)) > 0) {
                     try {
                         ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
                         byteBuffer.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());

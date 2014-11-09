@@ -189,7 +189,7 @@ public class Client {
     public synchronized void resendData() {
         long currentTime = System.currentTimeMillis();
         for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
-            if ((currentTime - networkPackage.getSentTime() - millisecondsBetweenResend) > 0) {
+            if ((currentTime - networkPackage.getSentTime() - Math.max(millisecondsBetweenResend, connection.getSmoothRoundTripTime() * 1.1)) > 0) {
                 try {
                     ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
                     byteBuffer.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
