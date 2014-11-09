@@ -47,6 +47,15 @@ public class Connection {
     // The last sent packages that waiting for ack
     private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<>(100);
 
+    // If keep alive are enabled use this to check when to send a new ping to this connection
+    private long nextKeepAlive;
+
+    // How long have the last 15 round trips taken
+    private final SizedStack<Long> roundTripTimes = new SizedStack<>(15);
+
+    // How long did the last ping take
+    private long lastPingTime;
+
     public Connection() {}
 
     public Connection(InetAddress address, int port) {
@@ -103,8 +112,36 @@ public class Connection {
         return getLastSequenceNumber(new byte[0], NetworkSendType.UNRELIABLE_GAME_DATA);
     }
 
+    public long getNextKeepAlive() {
+        return nextKeepAlive;
+    }
+
+    public void setNextKeepAlive(long nextKeepAlive) {
+        this.nextKeepAlive = nextKeepAlive;
+    }
+
     public Map<Integer, NetworkPackage> getNetworkPackageArrayMap() {
         return networkPackageArrayMap;
+    }
+
+    public SizedStack<Long> getRoundTripTimes() {
+        return roundTripTimes;
+    }
+
+    public long getSmoothRoundTripTime() {
+        long totalTime = 0;
+        for (Long roundTripTime : roundTripTimes) {
+            totalTime += roundTripTime;
+        }
+        return totalTime / roundTripTimes.size();
+    }
+
+    public long getLastPingTime() {
+        return lastPingTime;
+    }
+
+    public void setLastPingTime(long lastPingTime) {
+        this.lastPingTime = lastPingTime;
     }
 
     @Override

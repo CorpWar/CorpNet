@@ -44,7 +44,7 @@ public class Server {
     private int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
-    private long milisecoundsBetweenResend = 100;
+    private long milisecoundsBetweenResend = 80;
 
     // How long time in milliseconds it must pass before a disconnect
     private long milisecoundToTimeout = 20000;
@@ -60,6 +60,9 @@ public class Server {
 
     // How many concurrent connection the server can handle default is 8
     private int maxConnections;
+
+    // Keep the connection alive if possible
+    private boolean keepAlive = true;
 
     private byte[] buffer = new byte[BUFFER_SIZE];
     private ByteBuffer byteBuffer;
@@ -77,8 +80,7 @@ public class Server {
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
     private final Message message = new Message();
 
-    private final SizedStack<Long> pingTime = new SizedStack<>(15);
-    private long lastPingTime;
+
 
     /**
      * Create new server on port 7854 on localhost with max 8 connections
@@ -177,15 +179,19 @@ public class Server {
     }
 
     /**
-     * The last 15 package times in milli-seconds
+     * Check if keep connection are enabled
      * @return
      */
-    public SizedStack<Long> getPingTime() {
-        return pingTime;
+    public boolean isKeepAlive() {
+        return keepAlive;
     }
 
-    public long getLastPingTime() {
-        return lastPingTime;
+    /**
+     * Set if keep alive should be enabled, default are on
+     * @param keepAlive
+     */
+    public void setKeepAlive(boolean keepAlive) {
+        this.keepAlive = keepAlive;
     }
 
     /**
@@ -241,10 +247,10 @@ public class Server {
         for (int i = clients.size() - 1; i >= 0; i--) {
             Connection connection = clients.get(i);
             for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
-                if ((currentTime - networkPackage.getSentTime() - milisecoundsBetweenResend) > 0) {
+                if ((currentTime - networkPackage.getSentTime() - Math.max(milisecoundsBetweenResend, connection.getSmoothRoundTripTime())) > 0) {
                     try {
                         ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
-                        byteBuffer.putInt(protocalVersion).put((byte) NetworkSendType.RELIABLE_GAME_DATA.getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
+                        byteBuffer.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
                         byte[] sendData = byteBuffer.array();
                         DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                         datagramSocket.send(dp);
@@ -268,6 +274,23 @@ public class Server {
                 if ((currentTime - connection.getLastRecived()) > milisecoundToTimeout) {
                     disconnectedClients(connection.getConnectionId());
                     clients.remove(i);
+
+                }
+            }
+        }
+    }
+
+    /**
+     * Keep all connections alive
+     */
+    public synchronized void keepConnectionsAlive() {
+        if (serverThread != null && serverThread.isAlive()) {
+            long currentTime = System.currentTimeMillis();
+            for (int i = clients.size() - 1; i >= 0; i--) {
+                Connection connection = clients.get(i);
+                if (currentTime > connection.getNextKeepAlive()) {
+                    sendData(connection, new byte[0], NetworkSendType.PING);
+                    connection.setNextKeepAlive(System.currentTimeMillis() + (long) (milisecoundToTimeout * 0.2f));
                 }
             }
         }
@@ -363,6 +386,9 @@ public class Server {
                     // check if we have reached max connections
                     } else if (clients.size() < maxConnections) {
                         Connection newConnection = new Connection(tempConnection);
+                        if (keepAlive) {
+                            newConnection.setNextKeepAlive(System.currentTimeMillis() + (long)(milisecoundToTimeout * 0.2f));
+                        }
                         clients.add(newConnection);
                         workingClient = clients.indexOf(newConnection);
                     }
@@ -394,11 +420,12 @@ public class Server {
         private void verifyAck(Connection connection, int sequenceNumberWasAcked) {
             tempPackage = connection.getNetworkPackageArrayMap().remove(sequenceNumberWasAcked);
             if (tempPackage != null) {
-                long pingTime = System.currentTimeMillis() - tempPackage.getSentTime();
-                getPingTime().push(pingTime);
+                long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
+                connection.getRoundTripTimes().push(roundTripTime);
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
-                    lastPingTime = pingTime;
+                    connection.setLastPingTime(roundTripTime);
                 }
+                connection.updateTime();
             }
         }
     }
@@ -410,6 +437,7 @@ public class Server {
             while (running) {
                 resendData();
                 removeInactiveClients();
+                keepConnectionsAlive();
                 try {
                     Thread.sleep(millisecondsToRecheckConnection);
                 } catch (InterruptedException e) {

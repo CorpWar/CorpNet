@@ -61,8 +61,6 @@ public class Client {
     private NetworkPackage sendingPackage;
     private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
     private Message message = new Message();
-    private final SizedStack<Long> pingTime = new SizedStack<>(15);
-    private long lastPingTime;
 
     /**
      * Create new client
@@ -170,18 +168,6 @@ public class Client {
     }
 
     /**
-     * The last 15 package times in milli-seconds
-     * @return
-     */
-    public SizedStack<Long> getPingTime() {
-        return pingTime;
-    }
-
-    public long getLastPingTime() {
-        return lastPingTime;
-    }
-
-    /**
      * Use this if you don't care if the message get to the server
      * @param sendData
      */
@@ -206,7 +192,7 @@ public class Client {
             if ((currentTime - networkPackage.getSentTime() - millisecondsBetweenResend) > 0) {
                 try {
                     ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
-                    byteBuffer.putInt(protocalVersion).put((byte) NetworkSendType.RELIABLE_GAME_DATA.getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
+                    byteBuffer.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
                     sendData = byteBuffer.array();
                     dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                     sock.send(dp);
@@ -334,10 +320,10 @@ public class Client {
         private void verifyAck(int sequenceNumberWasAcked) {
             tempPackage = connection.getNetworkPackageArrayMap().remove(sequenceNumberWasAcked);
             if (tempPackage != null) {
-                long pingTime = System.currentTimeMillis() - tempPackage.getSentTime();
-                getPingTime().push(pingTime);
+                long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
+                connection.getRoundTripTimes().push(roundTripTime);
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
-                    lastPingTime = pingTime;
+                    connection.setLastPingTime(roundTripTime);
                 }
             }
         }

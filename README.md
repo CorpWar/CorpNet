@@ -1,24 +1,33 @@
 ![CorpNet](http://www.corpwar.net/wp-content/uploads/2014/10/corpnet.png)
 =======
 
-Java UDP game network librariy for client server solution.
+Java R-UDP network library for client server solution.
 
-If you want a fast UDP network library to your multiplayer game then this is the library for you.
-There have been some things added to normal UDP.
+If you want a fast UDP network library for your multiplayer game or application that support reliable packages, then this is the library for you.
 
-- You can send reliable request and know that this package have been received.
-- You need the correct id to be able to recevie packages.
-- Packages have sequence number to idenify them and what order are correct if that are desirable.
+## How to get going
+
+Head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go.
+
+## Changes and limitation from normal UDP
+
+There have been some things added to normal UDP to get it more reliable.
+
+- You can send reliable package and know it will be delivered to the other side.
+- You will be informed if someone get disconnected.
+- Every package have a unique id number.
+- You can get information how long packages take to send. 
  
 There are a few things that are not handled. Or should be implemented.
 
-- There are no flow control so if you send to many packages you might flood the connection.
+- If you send packages over max buffer size (default 4096) and you need to split your data you need to handle this your self.
 - Packages can come in another order then you send them, if this is a problem you have to deal with it your self.
+- There are no flow control so if you send to many packages you might flood the connection.
 
-Default max package size are set to 4096 bytes. If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
+Default max package size are set to 4096 bytes. 
+If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
-
  
 ## Starting server
 
@@ -33,12 +42,17 @@ This code start a server on port 55433 with ip 127.0.0.1. If you have different 
 The startServer method will start a new thread and handle all incoming traffic in that thread.
 Default it will listen on port 7854 and 127.0.0.1 if you don't set port and ip.
 
-This code adds a listener to handle receiving data from clients
+This code adds a listener to handle receiving data from clients and listen for disconnected clients
 ```Java
   server.registerServerListerner(new DataReceivedListener() {
       public void recivedMessage(Message message) {
         byte[] data = message.getData();
         ...
+      }
+      
+      public void disconnected(UUID uuid) {
+        // get notified if client get disconnected
+        ...      
       }
   });
 ```
@@ -49,7 +63,7 @@ This code start a client and connect it to the server on port 55433 with ip 127.
 Then it first send a reliable message and then an unreliable message to the server.
 ```Java
  Client client = new Client();
- client.setPortAndIp(4567, "127.0.0.1");
+ client.setPortAndIp(55433, "127.0.0.1");
  client.startClient();
  client.sendReliableData("Send a reliable message to server".getBytes());
  client.sendUnreliableData("Send an unreliable message that maybe get to the server".getBytes());
@@ -64,6 +78,11 @@ This code adds a listener to handle receiving data from the server
       public void recivedMessage(Message message) {
        byte[] data = message.getData();
         ...
+      }
+      
+      public void disconnected(UUID uuid) {
+        // get notified if server get disconnected
+        ...      
       }
   });
 ```
