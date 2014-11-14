@@ -132,7 +132,11 @@ public class Connection {
         for (Long roundTripTime : roundTripTimes) {
             totalTime += roundTripTime;
         }
-        return totalTime / roundTripTimes.size();
+        if (roundTripTimes.size() == 0) {
+            return 0;
+        } else {
+            return totalTime / roundTripTimes.size();
+        }
     }
 
     public long getLastPingTime() {

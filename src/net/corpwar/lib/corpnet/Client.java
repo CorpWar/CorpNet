@@ -133,6 +133,13 @@ public class Client {
     }
 
     /**
+     * @return connection for client
+     */
+    public Connection getConnection() {
+        return connection;
+    }
+
+    /**
      * OBS! Must be same on both client and server
      * @param protocalVersion
      */
