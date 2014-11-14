@@ -1,9 +1,10 @@
 ![CorpNet](http://www.corpwar.net/wp-content/uploads/2014/10/corpnet.png)
 =======
 
-Java R-UDP network library for client server solution.
+Java R-UDP network library for client <-> server solutions.
 
 If you want a fast UDP network library for your multiplayer game or application that support reliable packages, then this is the library for you.
+This library work on both desktop and on Android.
 
 ## How to get going
 
@@ -28,6 +29,9 @@ Default max package size are set to 4096 bytes.
 If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
+
+In maven this is set to compile with java 1.6. I had problem to get it work in Android with a later version. If someone can solve this please contact me.
+If you add this to Android don't forget <uses-permission android:name="android.permission.INTERNET" /> or it will not work.
  
 ## Starting server
 
