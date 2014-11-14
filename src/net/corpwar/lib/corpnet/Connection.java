@@ -19,7 +19,6 @@
 package net.corpwar.lib.corpnet;
 
 import java.net.InetAddress;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,13 +44,13 @@ public class Connection {
     private Integer localSequenceNumber = 1;
 
     // The last sent packages that waiting for ack
-    private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<>(100);
+    private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<Integer, NetworkPackage>(100);
 
     // If keep alive are enabled use this to check when to send a new ping to this connection
     private long nextKeepAlive;
 
     // How long have the last 15 round trips taken
-    private final SizedStack<Long> roundTripTimes = new SizedStack<>(15);
+    private final SizedStack<Long> roundTripTimes = new SizedStack<Long>(15);
 
     // How long did the last ping take
     private long lastPingTime;

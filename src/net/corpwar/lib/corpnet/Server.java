@@ -77,7 +77,7 @@ public class Server {
     private HandleConnection handleConnection = new HandleConnection();
 
 
-    private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
+    private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
     private final Message message = new Message();
 
 
@@ -87,7 +87,7 @@ public class Server {
      */
     public Server() {
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ArrayList<>(8);
+        clients = new ArrayList<Connection>(8);
         maxConnections = 8;
     }
 
@@ -101,7 +101,7 @@ public class Server {
         this.port = port;
         this.ipAdress = ipAdress;
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ArrayList <>(maxConnections);
+        clients = new ArrayList<Connection>(maxConnections);
         this.maxConnections = maxConnections;
     }
 
@@ -354,7 +354,9 @@ public class Server {
                 }
                 incoming = new DatagramPacket(buffer, buffer.length);
 
-            } catch (SocketException | UnknownHostException e) {
+            } catch (SocketException e) {
+                e.printStackTrace();
+            } catch (UnknownHostException e) {
                 e.printStackTrace();
             }
 

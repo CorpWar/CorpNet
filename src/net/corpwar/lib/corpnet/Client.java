@@ -59,7 +59,7 @@ public class Client {
     private ClientThread clientThread;
     private HandleConnection handleConnection = new HandleConnection();
     private NetworkPackage sendingPackage;
-    private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<>();
+    private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
     private Message message = new Message();
 
     /**
@@ -84,7 +84,9 @@ public class Client {
             if (clientThread == null || !clientThread.isAlive()) {
                 connection = new Connection(InetAddress.getByName(serverIP), port);
             }
-        } catch (SocketException | UnknownHostException e) {
+        } catch (SocketException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
             e.printStackTrace();
         }
     }
