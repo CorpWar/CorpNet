@@ -18,13 +18,13 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.util.SerializationUtils;
+
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 
 public class Server {
@@ -63,6 +63,16 @@ public class Server {
 
     // Keep the connection alive if possible
     private boolean keepAlive = true;
+
+    // Waiting que
+    private boolean waitingQue = false;
+
+    // The que with all waiting connections
+    private Deque<Connection> waitingQueArray = new ConcurrentLinkedDeque<Connection>();
+
+    // How many are allowed to be in the que
+    private int maxWaitingConnections = 10;
+
 
     private byte[] buffer = new byte[BUFFER_SIZE];
     private ByteBuffer byteBuffer;
@@ -179,6 +189,22 @@ public class Server {
     }
 
     /**
+     * Set if there should be a waiting que for client to get into the real connection
+     * @param waitingQue
+     */
+    public void setWaitingQue(boolean waitingQue) {
+        this.waitingQue = waitingQue;
+    }
+
+    /**
+     * Set how many waiting the server can handle
+     * @param maxWaitingConnections
+     */
+    public void setMaxWaitingConnections(int maxWaitingConnections) {
+        this.maxWaitingConnections = maxWaitingConnections;
+    }
+
+    /**
      * Check if keep connection are enabled
      * @return
      */
@@ -240,6 +266,20 @@ public class Server {
     }
 
     /**
+     * Use this if it is rely important the message get to the client except the client with the uuid
+     * @param dataToSend
+     * @param uuid
+     */
+    public void sendReliableToAllExcept(byte[] dataToSend, List<UUID> uuid) {
+        for (int i = clients.size() - 1; i >= 0; i--) {
+            Connection connection = clients.get(i);
+            if (!uuid.contains(connection.getConnectionId())) {
+                sendData(connection, dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
+            }
+        }
+    }
+
+    /**
      * You can trigger the resend method just to tell it to send messages that have reached the max limits of a message
      */
     public synchronized void resendData() {
@@ -290,6 +330,25 @@ public class Server {
                 Connection connection = clients.get(i);
                 if (currentTime > connection.getNextKeepAlive()) {
                     sendData(connection, new byte[0], NetworkSendType.PING);
+                    connection.setNextKeepAlive(System.currentTimeMillis() + (long) (milisecoundToTimeout * 0.2f));
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if there been a spot free
+     */
+    public synchronized void checkQue() {
+        if (serverThread != null && serverThread.isAlive()) {
+            if (clients.size() < maxConnections && waitingQueArray.size() > 0) {
+                clients.add(waitingQueArray.poll());
+            }
+            Integer queNumber = 1;
+            long currentTime = System.currentTimeMillis();
+            for (Connection connection : waitingQueArray) {
+                if (currentTime > connection.getNextKeepAlive()) {
+                    sendData(connection, SerializationUtils.getInstance().serialize(queNumber++), NetworkSendType.QUENUMBER);
                     connection.setNextKeepAlive(System.currentTimeMillis() + (long) (milisecoundToTimeout * 0.2f));
                 }
             }
@@ -393,11 +452,31 @@ public class Server {
                         }
                         clients.add(newConnection);
                         workingClient = clients.indexOf(newConnection);
+                    // Check if we have que system enabled and if we have reached max in the que
+                    } else if (waitingQue && waitingQueArray.size() < maxWaitingConnections) {
+                        Connection newConnection = new Connection(tempConnection);
+                        if (!waitingQueArray.contains(newConnection)) {
+                            waitingQueArray.add(newConnection);
+                        }
+                        continue;
                     }
                     // Verify that we have received ack otherwise ignore
                     if (byteBuffer.get(4) == NetworkSendType.ACK.getTypeCode()) {
                         if (incoming.getLength() == 13) {
-                            verifyAck(clients.get(workingClient), ByteBuffer.wrap(data, 9, 13).getInt());
+                            if (workingClient != -1) {
+                                verifyAck(clients.get(workingClient), ByteBuffer.wrap(data, 9, 13).getInt());
+                            }
+
+                            // Must be a better way here, change from Deque to ????
+                            if (waitingQue) {
+                                for (Connection connection : waitingQueArray) {
+                                    if (connection.equals(workingClient)) {
+                                        verifyAck(connection, ByteBuffer.wrap(data, 9, 13).getInt());
+                                        break;
+                                    }
+                                }
+                            }
+
                         }
                         continue;
                     }
@@ -440,6 +519,9 @@ public class Server {
                 resendData();
                 removeInactiveClients();
                 keepConnectionsAlive();
+                if (waitingQue) {
+                    checkQue();
+                }
                 try {
                     Thread.sleep(millisecondsToRecheckConnection);
                 } catch (InterruptedException e) {

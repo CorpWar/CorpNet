@@ -298,6 +298,15 @@ public class Client {
                         sendAck(byteBuffer.getInt(5));
                         continue;
                     }
+                    // If server use que the client get where in the que it is
+                    if (byteBuffer.get(4) == NetworkSendType.QUENUMBER.getTypeCode()) {
+                        sendAck(byteBuffer.getInt(5));
+                        connection.updateTime();
+                        message.setData(Arrays.copyOfRange(data, byteBufferSize, incoming.getLength()));
+                        message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
+                        recivedMessage(message);
+                        continue;
+                    }
                     // Check if we have already received data then send another ack and don't do anything else
                     if (connection.getNetworkPackageArrayMap().containsKey(byteBuffer.getInt(5))) {
                         sendAck(byteBuffer.getInt(5));
@@ -334,6 +343,7 @@ public class Client {
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }
+                connection.updateTime();
             }
         }
     }

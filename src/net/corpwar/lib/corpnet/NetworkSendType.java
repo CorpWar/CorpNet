@@ -24,6 +24,7 @@ package net.corpwar.lib.corpnet;
 public enum NetworkSendType {
     ERROR(-1), // If something went wrong use this
     ACK(0), // Notification that the reliable packed was sent correctly
+    QUENUMBER(1), // Send an integer where in the que the client are
     RELIABLE_GAME_DATA(20), // Send reliable game data between server and client
     UNRELIABLE_GAME_DATA(21), // Send unriliable gaem data between server and client
 
@@ -43,6 +44,8 @@ public enum NetworkSendType {
         switch (type) {
             case 0:
                 return ACK;
+            case 1:
+                return QUENUMBER;
             case 20:
                 return RELIABLE_GAME_DATA;
             case 21:

@@ -129,8 +129,8 @@ public class Connection {
 
     public long getSmoothRoundTripTime() {
         long totalTime = 0;
-        for (Long roundTripTime : roundTripTimes) {
-            totalTime += roundTripTime;
+        for (int i = roundTripTimes.size() - 1; i >= 0; i--) {
+            totalTime += roundTripTimes.get(i);
         }
         if (roundTripTimes.size() == 0) {
             return 0;
