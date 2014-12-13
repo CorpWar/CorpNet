@@ -361,7 +361,7 @@ public class Server {
      * @param data
      * @param sendType
      */
-    public void sendData(Connection connection, byte[] data, NetworkSendType sendType) {
+    public synchronized void sendData(Connection connection, byte[] data, NetworkSendType sendType) {
         try {
             ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
             NetworkPackage sendingPackage = connection.getLastSequenceNumber(data, sendType);
