@@ -23,10 +23,15 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 public class Client {
+
+    private static final Logger LOG = Logger.getLogger(Client.class.getName());
 
     //The name of the protocol version, to sort out incorrect package
     private int protocalVersion = "Protocal 0.1".hashCode();
@@ -59,7 +64,7 @@ public class Client {
     private ClientThread clientThread;
     private HandleConnection handleConnection = new HandleConnection();
     private NetworkPackage sendingPackage;
-    private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
+    private final List<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
     private Message message = new Message();
 
     /**
@@ -69,7 +74,7 @@ public class Client {
         try {
             sock = new DatagramSocket();
         } catch (SocketException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error create client", e);
         }
     }
 
@@ -85,9 +90,9 @@ public class Client {
                 connection = new Connection(InetAddress.getByName(serverIP), port);
             }
         } catch (SocketException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error create client", e);
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error create client", e);
         }
     }
 
@@ -110,7 +115,7 @@ public class Client {
                 connection = new Connection(InetAddress.getByName(serverIP), port);
             }
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error change port and IP", e);
         }
     }
 
@@ -122,7 +127,7 @@ public class Client {
             try {
                 connection = new Connection(InetAddress.getByName("127.0.0.1"), 7854);
             } catch (UnknownHostException e) {
-                e.printStackTrace();
+                LOG.log(Level.SEVERE, "Error connect to server", e);
             }
         }
         connection.updateTime();
@@ -207,7 +212,7 @@ public class Client {
                     sock.send(dp);
                     networkPackage.resendData(networkPackage.getSequenceNumber());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.log(Level.SEVERE, "Error send data", e);
                 }
             }
         }
@@ -258,7 +263,7 @@ public class Client {
             dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
             sock.send(dp);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error send data", e);
         }
     }
 
@@ -271,7 +276,7 @@ public class Client {
             dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
             sock.send(dp);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error send data", e);
         }
     }
 
@@ -330,7 +335,7 @@ public class Client {
                     recivedMessage(message);
                     connection.updateTime();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.log(Level.SEVERE, "Error receive data", e);
                 }
             }
         }
