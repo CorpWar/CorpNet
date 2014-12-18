@@ -25,9 +25,13 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 public class Server {
+
+    private static final Logger LOG = Logger.getLogger(Server.class.getName());
 
     // The name of the protocol version, to sort out incorrect package
     private int protocalVersion = "Protocal 0.1".hashCode();
@@ -296,7 +300,7 @@ public class Server {
                         datagramSocket.send(dp);
                         networkPackage.resendData(networkPackage.getSequenceNumber());
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LOG.log(Level.SEVERE, "Error resend data", e);
                     }
                 }
             }
@@ -370,7 +374,7 @@ public class Server {
             DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
             datagramSocket.send(dp);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error send data", e);
         }
     }
 
@@ -383,7 +387,7 @@ public class Server {
             DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
             datagramSocket.send(dp);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error send ack", e);
         }
     }
 
@@ -414,9 +418,9 @@ public class Server {
                 incoming = new DatagramPacket(buffer, buffer.length);
 
             } catch (SocketException e) {
-                e.printStackTrace();
+                LOG.log(Level.SEVERE, "Error open socket", e);
             } catch (UnknownHostException e) {
-                e.printStackTrace();
+                LOG.log(Level.SEVERE, "Error with host", e);
             }
 
             while(running)
@@ -493,7 +497,7 @@ public class Server {
                     clients.get(workingClient).updateTime();
                     recivedMessage(message);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.log(Level.SEVERE, "Error resend data", e);
                 }
             }
         }
@@ -525,7 +529,7 @@ public class Server {
                 try {
                     Thread.sleep(millisecondsToRecheckConnection);
                 } catch (InterruptedException e) {
-                    // Ignore error
+                    LOG.log(Level.FINE, "Error when sleeping");
                 }
             }
         }
