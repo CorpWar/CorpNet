@@ -1,6 +1,8 @@
 ![CorpNet](http://www.corpwar.net/wp-content/uploads/2014/10/corpnet.png)
 =======
 
+[![Build Status](http://90.230.165.227:7890/buildStatus/icon?job=CorpNet)](http://90.230.165.227:7890/job/CorpNet/)
+
 Java R-UDP network library for client <-> server solutions.
 
 If you want a fast UDP network library for your multiplayer game or application that support reliable packages, then this is the library for you.
