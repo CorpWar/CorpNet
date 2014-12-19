@@ -19,10 +19,13 @@
 package net.corpwar.lib.corpnet.util;
 
 import java.io.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SerializationUtils {
 
     private static SerializationUtils serializationUtils = null;
+    private static final Logger LOG = Logger.getLogger(SerializationUtils.class.getName());
 
 
     private SerializationUtils() {
@@ -43,19 +46,19 @@ public class SerializationUtils {
             oos.writeObject(obj);
             oos.reset();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.log(Level.FINE, "Error IOException");
         } finally {
             if (oos != null) {
                 try {
                     oos.close();
                 } catch (IOException e) {
-                    // Ignore error
+                    LOG.log(Level.FINE, "Error IOException");
                 }
             }
             try {
                 baos.close();
             } catch (IOException e) {
-                // Ignore error
+                LOG.log(Level.FINE, "Error IOException");
                 }
         }
         byte[] byteObj = baos.toByteArray();
@@ -73,23 +76,23 @@ public class SerializationUtils {
             ois = new ObjectInputStream(bais);
             obj = (T) ois.readObject();
         } catch (IOException e) {
-            // Ignore any IO error
+            LOG.log(Level.FINE, "Error IOException");
         } catch (ClassNotFoundException e) {
-            // If we can't find class return null
+            LOG.log(Level.FINE, "Error Class not found");
             return null;
         } finally {
             if (bais != null) {
                 try {
                     bais.close();
                 } catch (IOException e) {
-                    // Ignore error
+                    LOG.log(Level.FINE, "Error IOException");
                 }
             }
             if (ois != null) {
                 try {
                     ois.close();
                 } catch (IOException e) {
-                    // Ignore error
+                    LOG.log(Level.FINE, "Error IOException");
                 }
             }
         }

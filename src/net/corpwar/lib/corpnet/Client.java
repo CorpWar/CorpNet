@@ -37,7 +37,7 @@ public class Client {
     private int protocalVersion = "Protocal 0.1".hashCode();
 
     // Max size that can be sent in one package
-    private int BUFFER_SIZE = 4096;
+    private final int bufferSize;
 
     /**
      * This should be same as the server
@@ -45,7 +45,7 @@ public class Client {
      * 1 byte type of package
      * 4 byte sequence ID
      */
-    private int byteBufferSize = 9;
+    private final int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
     private long millisecondsBetweenResend = 100;
@@ -55,6 +55,12 @@ public class Client {
 
     // How long it should wait between every check for disconnect and resend data. This should be lower or same as millisecondsBetweenResend
     private long millisecondsToRecheckConnection = 20;
+
+    // Default host address when start a new client
+    private final String defaultHostAddress = "127.0.0.1";
+
+    // Default port when start a new client
+    private final int defaultPort = 7854;
 
     private Connection connection;
     private DatagramSocket sock = null;
@@ -71,6 +77,7 @@ public class Client {
      * Create new client
      */
     public Client() {
+        bufferSize = 4096;
         try {
             sock = new DatagramSocket();
         } catch (SocketException e) {
@@ -84,6 +91,7 @@ public class Client {
      * @param serverIP
      */
     public Client(int port, String serverIP) {
+        bufferSize = 4096;
         try {
             sock = new DatagramSocket();
             if (clientThread == null || !clientThread.isAlive()) {
@@ -125,7 +133,7 @@ public class Client {
     public void startClient() {
         if (connection == null) {
             try {
-                connection = new Connection(InetAddress.getByName("127.0.0.1"), 7854);
+                connection = new Connection(InetAddress.getByName(defaultHostAddress), defaultPort);
             } catch (UnknownHostException e) {
                 LOG.log(Level.SEVERE, "Error connect to server", e);
             }
@@ -285,7 +293,7 @@ public class Client {
         private NetworkPackage tempPackage;
         @Override
         public void run() {
-            byte[] buffer = new byte[BUFFER_SIZE];
+            byte[] buffer = new byte[bufferSize];
             DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
 
             while (running) {
