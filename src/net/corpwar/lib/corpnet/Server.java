@@ -37,7 +37,7 @@ public class Server {
     private int protocalVersion = "Protocal 0.1".hashCode();
 
     // Max size that can be sent in one package
-    private int BUFFER_SIZE = 4096;
+    private int bufferSize = 4096;
 
     /**
      * This should be same as client
@@ -45,7 +45,7 @@ public class Server {
      * 1 byte type of package
      * 4 byte sequence ID
      */
-    private int byteBufferSize = 9;
+    private final int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
     private long milisecoundsBetweenResend = 80;
@@ -57,10 +57,10 @@ public class Server {
     private long millisecondsToRecheckConnection = 20;
 
     // Port the server will liston on
-    private int port = 7854;
+    private int port;
 
     // Ip the server will listen on
-    private String ipAdress = "127.0.0.1";
+    private String ipAdress;
 
     // How many concurrent connection the server can handle default is 8
     private int maxConnections;
@@ -78,7 +78,7 @@ public class Server {
     private int maxWaitingConnections = 10;
 
 
-    private byte[] buffer = new byte[BUFFER_SIZE];
+    private byte[] buffer = new byte[bufferSize];
     private ByteBuffer byteBuffer;
     private DatagramSocket datagramSocket = null;
     private DatagramPacket incoming = null;
@@ -100,6 +100,8 @@ public class Server {
      * Create new server on port 7854 on localhost with max 8 connections
      */
     public Server() {
+        ipAdress = "127.0.0.1";
+        port = 7854;
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
         clients = new ArrayList<Connection>(8);
         maxConnections = 8;
@@ -293,7 +295,7 @@ public class Server {
             for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
                 if ((currentTime - networkPackage.getSentTime() - Math.max(milisecoundsBetweenResend, connection.getSmoothRoundTripTime() * 1.1)) > 0) {
                     try {
-                        ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
+                        byteBuffer = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
                         byteBuffer.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
                         byte[] sendData = byteBuffer.array();
                         DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
@@ -345,7 +347,7 @@ public class Server {
      */
     public synchronized void checkQue() {
         if (serverThread != null && serverThread.isAlive()) {
-            if (clients.size() < maxConnections && waitingQueArray.size() > 0) {
+            if (clients.size() < maxConnections && !waitingQueArray.isEmpty()) {
                 clients.add(waitingQueArray.poll());
             }
             Integer queNumber = 1;
@@ -367,7 +369,7 @@ public class Server {
      */
     public synchronized void sendData(Connection connection, byte[] data, NetworkSendType sendType) {
         try {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
+            byteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
             NetworkPackage sendingPackage = connection.getLastSequenceNumber(data, sendType);
             byteBuffer.putInt(protocalVersion).put((byte)sendType.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).put(data);
             byte[] sendData = byteBuffer.array();
@@ -380,7 +382,7 @@ public class Server {
 
     private void sendAck(Connection connection, int sequenceNumberToAck) {
         try {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + 4);
+            byteBuffer = ByteBuffer.allocate(byteBufferSize + 4);
             NetworkPackage sendingPackage = connection.getLastSequenceNumber();
             byteBuffer.putInt(protocalVersion).put((byte)NetworkSendType.ACK.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).putInt(sequenceNumberToAck);
             byte[] sendData = byteBuffer.array();
@@ -423,8 +425,7 @@ public class Server {
                 LOG.log(Level.SEVERE, "Error with host", e);
             }
 
-            while(running)
-            {
+            while(running) {
                 try {
                     datagramSocket.receive(incoming);
                     byte[] data = incoming.getData();
