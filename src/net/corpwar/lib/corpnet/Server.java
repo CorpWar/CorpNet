@@ -45,7 +45,7 @@ public class Server {
      * 1 byte type of package
      * 4 byte sequence ID
      */
-    private final int byteBufferSize = 9;
+    private final static int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
     private long milisecoundsBetweenResend = 80;
@@ -91,7 +91,7 @@ public class Server {
     private HandleConnection handleConnection = new HandleConnection();
 
 
-    private final ArrayList<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
+    private final List<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
     private final Message message = new Message();
 
 
@@ -475,7 +475,7 @@ public class Server {
                             // Must be a better way here, change from Deque to ????
                             if (waitingQue) {
                                 for (Connection connection : waitingQueArray) {
-                                    if (connection.equals(workingClient)) {
+                                    if (connection.equals(tempConnection)) {
                                         verifyAck(connection, ByteBuffer.wrap(data, 9, 13).getInt());
                                         break;
                                     }

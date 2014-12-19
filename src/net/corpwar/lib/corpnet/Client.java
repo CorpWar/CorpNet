@@ -45,7 +45,7 @@ public class Client {
      * 1 byte type of package
      * 4 byte sequence ID
      */
-    private final int byteBufferSize = 9;
+    private final static int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
     private long millisecondsBetweenResend = 100;
