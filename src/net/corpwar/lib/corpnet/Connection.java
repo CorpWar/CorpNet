@@ -55,7 +55,9 @@ public class Connection {
     // How long did the last ping take
     private long lastPingTime;
 
-    public Connection() {}
+    public Connection() {
+
+    }
 
     public Connection(InetAddress address, int port) {
         this.address = address;
@@ -132,7 +134,7 @@ public class Connection {
         for (int i = roundTripTimes.size() - 1; i >= 0; i--) {
             totalTime += roundTripTimes.get(i);
         }
-        if (roundTripTimes.size() == 0) {
+        if (roundTripTimes.isEmpty()) {
             return 0;
         } else {
             return totalTime / roundTripTimes.size();
