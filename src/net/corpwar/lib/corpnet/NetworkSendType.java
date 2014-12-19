@@ -22,13 +22,25 @@ package net.corpwar.lib.corpnet;
  * Type must be between -127 and 127 because it is cast to byte type.
  */
 public enum NetworkSendType {
-    ERROR(-1), // If something went wrong use this
-    ACK(0), // Notification that the reliable packed was sent correctly
-    QUENUMBER(1), // Send an integer where in the que the client are
-    RELIABLE_GAME_DATA(20), // Send reliable game data between server and client
-    UNRELIABLE_GAME_DATA(21), // Send unriliable gaem data between server and client
 
-    PING(100); // If you just need to ping and tell you are alive, Or for testing
+    // If something went wrong use this
+    ERROR(-1),
+
+    // Notification that the reliable packed was sent correctly
+    ACK(0),
+
+    // Send an integer where in the que the client are
+    QUENUMBER(1),
+
+    // Send reliable game data between server and client
+    RELIABLE_GAME_DATA(20),
+
+    // Send unriliable gaem data between server and client
+    UNRELIABLE_GAME_DATA(21),
+
+
+    // If you just need to ping and tell you are alive, Or for testing
+    PING(100);
 
     private int typeCode;
 
