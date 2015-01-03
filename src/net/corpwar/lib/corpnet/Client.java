@@ -57,10 +57,10 @@ public class Client {
     private long millisecondsToRecheckConnection = 20;
 
     // Default host address when start a new client
-    private final String defaultHostAddress = "127.0.0.1";
+    private final static String defaultHostAddress = "127.0.0.1";
 
     // Default port when start a new client
-    private final int defaultPort = 7854;
+    private final static int defaultPort = 7854;
 
     private Connection connection;
     private DatagramSocket sock = null;
