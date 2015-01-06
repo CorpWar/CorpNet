@@ -82,6 +82,7 @@ public class Server {
     private ByteBuffer byteBuffer;
     private DatagramSocket datagramSocket = null;
     private DatagramPacket incoming = null;
+    private NetworkPackage sendingPackage;
 
     private boolean running = false;
 
@@ -93,7 +94,6 @@ public class Server {
 
     private final List<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
     private final Message message = new Message();
-
 
 
     /**
@@ -369,18 +369,54 @@ public class Server {
      */
     public synchronized void sendData(Connection connection, byte[] data, NetworkSendType sendType) {
         try {
-            byteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
-            NetworkPackage sendingPackage = connection.getLastSequenceNumber(data, sendType);
-            byteBuffer.putInt(protocalVersion).put((byte)sendType.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).put(data);
-            byte[] sendData = byteBuffer.array();
-            DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
-            datagramSocket.send(dp);
+            if (data.length + byteBufferSize <= bufferSize) {
+                byteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
+                sendingPackage = connection.getLastSequenceNumber(data, sendType);
+                byteBuffer.putInt(protocalVersion).put((byte) sendType.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).put(data);
+                byte[] sendData = byteBuffer.array();
+                DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
+                datagramSocket.send(dp);
+            } else {
+                int len = 0;
+                byte[] dataToSend;
+                int splitIdSize = 4;
+                Integer splitId = connection.getGlobalSplitSequenceNumber();
+                while (true) {
+                    if (data.length > len + bufferSize + byteBufferSize + splitIdSize) {
+                        dataToSend = Arrays.copyOfRange(data, len, bufferSize - byteBufferSize - splitIdSize + len);
+                        ByteBuffer byteBuffer = ByteBuffer.allocate(bufferSize);
+                        byteBuffer.putInt(protocalVersion);
+                        if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
+                            byteBuffer.put((byte) NetworkSendType.RELIABLE_SPLIT_GAME_DATA.getTypeCode());
+                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
+                        } else {
+                            byteBuffer.put((byte) NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA.getTypeCode());
+                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA);
+                        }
+                        byteBuffer.putInt(sendingPackage.getSequenceNumber()).putInt(splitId).put(dataToSend);
+                        len += bufferSize - byteBufferSize - splitIdSize;
+                    } else {
+                        dataToSend = Arrays.copyOfRange(data, len, data.length);
+                        ByteBuffer byteBuffer = ByteBuffer.allocate(bufferSize);
+                        byteBuffer.putInt(protocalVersion);
+                        if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
+                            byteBuffer.put((byte) NetworkSendType.RELIABLE_SPLIT_GAME_DATA.getTypeCode());
+                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
+                        } else {
+                            byteBuffer.put((byte) NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA.getTypeCode());
+                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA);
+                        }
+                        byteBuffer.putInt(sendingPackage.getSequenceNumber()).putInt(splitId).put(dataToSend).putInt(Arrays.hashCode(data));
+                        break;
+                    }
+                }
+            }
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Error send data", e);
         }
     }
 
-    private void sendAck(Connection connection, int sequenceNumberToAck) {
+    private synchronized void sendAck(Connection connection, int sequenceNumberToAck) {
         try {
             byteBuffer = ByteBuffer.allocate(byteBufferSize + 4);
             NetworkPackage sendingPackage = connection.getLastSequenceNumber();

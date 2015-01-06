@@ -55,6 +55,9 @@ public class Connection {
     // How long did the last ping take
     private long lastPingTime;
 
+    // if we need to split a message, what sequence number should the message get
+    private Integer globalSplitSequenceNumber = 1;
+
     public Connection() {
 
     }
@@ -147,6 +150,12 @@ public class Connection {
 
     public void setLastPingTime(long lastPingTime) {
         this.lastPingTime = lastPingTime;
+    }
+
+    public Integer getGlobalSplitSequenceNumber() {
+        if (globalSplitSequenceNumber == Integer.MAX_VALUE)
+            globalSplitSequenceNumber = 1;
+        return globalSplitSequenceNumber++;
     }
 
     @Override

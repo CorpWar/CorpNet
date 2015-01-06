@@ -38,6 +38,12 @@ public enum NetworkSendType {
     // Send unriliable gaem data between server and client
     UNRELIABLE_GAME_DATA(21),
 
+    // Send a split reliable message, all parts will be delivered
+    RELIABLE_SPLIT_GAME_DATA(30),
+
+    // Send a split unreliable message, if any part of the message are lost all of the message will be discarded
+    // If the packages are getting in the wrong order the message will be discarded
+    UNRELIABLE_SPLIT_GAME_DATA(31),
 
     // If you just need to ping and tell you are alive, Or for testing
     PING(100);
@@ -62,6 +68,8 @@ public enum NetworkSendType {
                 return RELIABLE_GAME_DATA;
             case 21:
                 return UNRELIABLE_GAME_DATA;
+            case 31:
+
             case 100:
                 return PING;
             default:

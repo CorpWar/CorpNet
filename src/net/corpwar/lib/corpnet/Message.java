@@ -37,6 +37,9 @@ public class Message {
     // connection id
     private UUID connectionID;
 
+    // Sequence number when splitting messages
+    private int splitMessageId;
+
     public byte[] getData() {
         return data;
     }
@@ -67,5 +70,13 @@ public class Message {
 
     public void setConnectionID(UUID connectionID) {
         this.connectionID = connectionID;
+    }
+
+    public int getSplitMessageId() {
+        return splitMessageId;
+    }
+
+    public void setSplitMessageId(int splitMessageId) {
+        this.splitMessageId = splitMessageId;
     }
 }
