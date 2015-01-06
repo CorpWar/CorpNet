@@ -5,12 +5,12 @@
 
 Java R-UDP network library for client <-> server solutions.
 
-If you want a fast UDP network library for your multiplayer game or application that support reliable packages, then this is the library for you.
+If you want a fast UDP network library for your multiplayer game or application that support both reliable and unreliable packages, then this is the library for you.
 This library work on both desktop and on Android.
 
 ## How to get going
 
-Head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go.
+Head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go. Or just use the source from here to get the latest update.
 
 ## Changes and limitation from normal UDP
 
@@ -23,12 +23,12 @@ There have been some things added to normal UDP to get it more reliable.
  
 There are a few things that are not handled. Or should be implemented.
 
-- If you send packages over max buffer size (default 4096) and you need to split your data you need to handle this your self.
+- If you send packages over max buffer size (default 4096), then you need to handle this for your self. (This is work in progress to handle bigger packages that can be split in multiple packages)
 - Packages can come in another order then you send them, if this is a problem you have to deal with it your self.
 - There are no flow control so if you send to many packages you might flood the connection.
 
 Default max package size are set to 4096 bytes. 
-If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order.
+If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order. (Working on this one)
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
 
