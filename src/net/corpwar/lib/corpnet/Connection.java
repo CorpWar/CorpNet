@@ -18,9 +18,11 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Map;
-import java.util.UUID;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -41,10 +43,13 @@ public class Connection {
     private long lastRecived;
 
     // Unique number for every new packet that is sent
-    private Integer localSequenceNumber = 1;
+    private int localSequenceNumber = 1;
 
     // The last sent packages that waiting for ack
     private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<Integer, NetworkPackage>(100);
+
+    // The last 100 received packages
+    private SizedStack<Integer> receivedPackageStack = new SizedStack<Integer>(500);
 
     // If keep alive are enabled use this to check when to send a new ping to this connection
     private long nextKeepAlive;
@@ -56,7 +61,13 @@ public class Connection {
     private long lastPingTime;
 
     // if we need to split a message, what sequence number should the message get
-    private Integer globalSplitSequenceNumber = 1;
+    private int globalSplitSequenceNumber = 1;
+
+    // Temporary byte for split messages
+    private Map<Integer, List<SplitMessage>> splitMessageData = new ConcurrentHashMap<Integer, List<SplitMessage>>();
+
+    //
+    private ByteArrayOutputStream splitMessageoutputStream = new ByteArrayOutputStream();
 
     public Connection() {
 
@@ -99,9 +110,15 @@ public class Connection {
     }
 
     public NetworkPackage getLastSequenceNumber(byte[] data, NetworkSendType sendType) {
-        NetworkPackage networkPackage = new NetworkPackage(localSequenceNumber, data, sendType);
+        NetworkPackage networkPackage;
         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.PING) {
+            networkPackage = new NetworkPackage(localSequenceNumber, data, sendType);
             networkPackageArrayMap.put(localSequenceNumber, networkPackage);
+        } else if (sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
+            networkPackage = new NetworkPackage(localSequenceNumber, data, sendType, globalSplitSequenceNumber);
+            networkPackageArrayMap.put(localSequenceNumber, networkPackage);
+        } else {
+            networkPackage = new NetworkPackage(localSequenceNumber);
         }
 
         if (localSequenceNumber == Integer.MAX_VALUE) {
@@ -128,6 +145,14 @@ public class Connection {
         return networkPackageArrayMap;
     }
 
+    public boolean isReceivedPackageStack(Integer receivedPackageSequence) {
+        return this.receivedPackageStack.contains(receivedPackageSequence);
+    }
+
+    public void setReceivedPackageStack(Integer receivedPackageSequence) {
+        this.receivedPackageStack.push(receivedPackageSequence);
+    }
+
     public SizedStack<Long> getRoundTripTimes() {
         return roundTripTimes;
     }
@@ -152,10 +177,53 @@ public class Connection {
         this.lastPingTime = lastPingTime;
     }
 
-    public Integer getGlobalSplitSequenceNumber() {
+    public int getGlobalSplitSequenceNumber() {
         if (globalSplitSequenceNumber == Integer.MAX_VALUE)
             globalSplitSequenceNumber = 1;
         return globalSplitSequenceNumber++;
+    }
+
+    public ByteArrayOutputStream getSplitMessageoutputStream() {
+        return splitMessageoutputStream;
+    }
+
+    public void setSplitMessageoutputStream(ByteArrayOutputStream splitMessageoutputStream) {
+        this.splitMessageoutputStream = splitMessageoutputStream;
+    }
+
+    public byte[] setSplitMessageData(int splitId, int messageId, byte[] data) {
+        if (splitMessageData.containsKey(splitId)) {
+            SplitMessage splitMessage = new SplitMessage(messageId, data);
+            List<SplitMessage> splitMessages = splitMessageData.get(splitId);
+            if (splitMessages.contains(splitMessage)) {
+                return new byte[0];
+            }
+            if (!splitMessages.contains(splitMessage)) {
+                splitMessages.add(splitMessage);
+            }
+            Collections.sort(splitMessages);
+            splitMessageoutputStream.reset();
+            for (int i = splitMessages.size() - 1; i >= 0; i--) {
+                try {
+                    splitMessageoutputStream.write(splitMessages.get(i).getData());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            byte[] alldata = splitMessageoutputStream.toByteArray();
+            int hashCode = ByteBuffer.wrap(alldata, alldata.length - 4, 4).getInt();
+            byte[] alldata2 = Arrays.copyOfRange(alldata, 0, alldata.length - 4);
+            if (Arrays.hashCode(alldata2) == hashCode) {
+                splitMessageData.remove(messageId);
+                return alldata2;
+            }
+        } else {
+            SplitMessage splitMessage = new SplitMessage(messageId, data);
+            List<SplitMessage> splitMessages = new ArrayList<SplitMessage>();
+            splitMessages.add(splitMessage);
+            splitMessageData.put(splitId, splitMessages);
+        }
+        return new byte[0];
     }
 
     @Override

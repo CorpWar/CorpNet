@@ -29,7 +29,14 @@ public class NetworkPackage {
     // When did we send the data
     private long sentTime;
 
+    private long ackTimeReceived;
+
+    private int splitSequenceNumber;
+
     private NetworkSendType networkSendType;
+
+    public NetworkPackage() {
+    }
 
     public NetworkPackage(int sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
@@ -41,6 +48,14 @@ public class NetworkPackage {
         this.dataSent = dataSent;
         sentTime = System.currentTimeMillis();
         this.networkSendType = networkSendType;
+    }
+
+    public NetworkPackage(int sequenceNumber, byte[] dataSent, NetworkSendType networkSendType, int splitSequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+        this.dataSent = dataSent;
+        sentTime = System.currentTimeMillis();
+        this.networkSendType = networkSendType;
+        this.splitSequenceNumber = splitSequenceNumber;
     }
 
     public void resendData(int sequenceNumber) {
@@ -64,7 +79,19 @@ public class NetworkPackage {
         return sentTime;
     }
 
+    public long getAckTimeReceived() {
+        return ackTimeReceived;
+    }
+
+    public void setAckTimeReceived(long ackTimeReceived) {
+        this.ackTimeReceived = ackTimeReceived;
+    }
+
     public NetworkSendType getNetworkSendType() {
         return networkSendType;
+    }
+
+    public int getSplitSequenceNumber() {
+        return splitSequenceNumber;
     }
 }
