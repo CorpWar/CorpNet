@@ -77,7 +77,7 @@ public class Client {
      * Create new client
      */
     public Client() {
-        bufferSize = 90;
+        bufferSize = 512;
         try {
             sock = new DatagramSocket();
         } catch (SocketException e) {
@@ -91,7 +91,28 @@ public class Client {
      * @param serverIP
      */
     public Client(int port, String serverIP) {
-        bufferSize = 90;
+        bufferSize = 512;
+        try {
+            sock = new DatagramSocket();
+            if (clientThread == null || !clientThread.isAlive()) {
+                connection = new Connection(InetAddress.getByName(serverIP), port);
+            }
+        } catch (SocketException e) {
+            LOG.log(Level.SEVERE, "Error create client", e);
+        } catch (UnknownHostException e) {
+            LOG.log(Level.SEVERE, "Error create client", e);
+        }
+    }
+
+    /**
+     * Create new client and set port, ip to server and protocal version. Must be same on client and server.
+     * @param port
+     * @param serverIP
+     * @param protocalVersionName
+     */
+    public Client(int port, String serverIP, String protocalVersionName) {
+        bufferSize = 512;
+        protocalVersion = protocalVersionName.hashCode();
         try {
             sock = new DatagramSocket();
             if (clientThread == null || !clientThread.isAlive()) {
@@ -241,6 +262,19 @@ public class Client {
             if (currentTime > millisecondToTimeout + connection.getLastRecived()) {
                 disconnectedClients(connection.getConnectionId());
                 killConnection();
+            }
+        }
+    }
+
+    public synchronized void removeInactiveSplitMessages() {
+        if (clientThread != null && clientThread.isAlive()) {
+            long currentTime = System.currentTimeMillis();
+            Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
+            for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
+                Integer splitId = j.next();
+                if (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime) {
+                    j.remove();
+                }
             }
         }
     }
@@ -415,18 +449,15 @@ public class Client {
 
         private void handleSplitMessages(Message message) {
             // If we have started to receive part of split message
+            byte[] data = connection.setSplitMessageData(message.getSplitMessageId(), message.getSequenceId(), message.getData());
+            if (data.length > 0) {
+                message.setData(data);
+                recivedMessage(message);
+            }
             if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
-                byte[] data = connection.setSplitMessageData(message.getSplitMessageId(), message.getSequenceId(), message.getData());
-                if (data.length > 0) {
-                    message.setData(data);
-                    recivedMessage(message);
-                }
                 sendAck(message.getSequenceId());
-            } else if (message.getNetworkSendType() == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
-                // TODO - fix unreliable messages
             }
             connection.updateTime();
-
         }
 
         private void verifyAck(int sequenceNumberWasAcked) {
@@ -439,6 +470,7 @@ public class Client {
                 }
                 connection.updateTime();
             }
+            tempPackage = null;
         }
     }
 
@@ -449,6 +481,7 @@ public class Client {
             while (running) {
                 resendData();
                 disconnectInactiveServer();
+                removeInactiveSplitMessages();
                 try {
                     Thread.sleep(millisecondsToRecheckConnection);
                 } catch (InterruptedException e) {

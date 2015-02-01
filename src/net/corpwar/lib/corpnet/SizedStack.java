@@ -28,6 +28,10 @@ public class SizedStack<T> extends Stack<T> {
         this.maxSize = size;
     }
 
+    public int getMaxSize() {
+        return maxSize;
+    }
+
     @Override
     public T push(T object) {
         //If the stack is too big, remove elements until it's the right size.

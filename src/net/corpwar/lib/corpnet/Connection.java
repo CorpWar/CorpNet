@@ -66,7 +66,6 @@ public class Connection {
     // Temporary byte for split messages
     private Map<Integer, List<SplitMessage>> splitMessageData = new ConcurrentHashMap<Integer, List<SplitMessage>>();
 
-    //
     private ByteArrayOutputStream splitMessageoutputStream = new ByteArrayOutputStream();
 
     public Connection() {
@@ -160,6 +159,9 @@ public class Connection {
     public long getSmoothRoundTripTime() {
         long totalTime = 0;
         for (int i = roundTripTimes.size() - 1; i >= 0; i--) {
+            if (roundTripTimes.getMaxSize() < i) {
+                continue;
+            }
             totalTime += roundTripTimes.get(i);
         }
         if (roundTripTimes.isEmpty()) {
@@ -183,12 +185,8 @@ public class Connection {
         return globalSplitSequenceNumber++;
     }
 
-    public ByteArrayOutputStream getSplitMessageoutputStream() {
-        return splitMessageoutputStream;
-    }
-
-    public void setSplitMessageoutputStream(ByteArrayOutputStream splitMessageoutputStream) {
-        this.splitMessageoutputStream = splitMessageoutputStream;
+    public Map<Integer, List<SplitMessage>> getSplitMessageData() {
+        return splitMessageData;
     }
 
     public byte[] setSplitMessageData(int splitId, int messageId, byte[] data) {
@@ -212,10 +210,10 @@ public class Connection {
             }
             byte[] alldata = splitMessageoutputStream.toByteArray();
             int hashCode = ByteBuffer.wrap(alldata, alldata.length - 4, 4).getInt();
-            byte[] alldata2 = Arrays.copyOfRange(alldata, 0, alldata.length - 4);
-            if (Arrays.hashCode(alldata2) == hashCode) {
+            byte[] receivedData = Arrays.copyOfRange(alldata, 0, alldata.length - 4);
+            if (Arrays.hashCode(receivedData) == hashCode) {
                 splitMessageData.remove(messageId);
-                return alldata2;
+                return receivedData;
             }
         } else {
             SplitMessage splitMessage = new SplitMessage(messageId, data);

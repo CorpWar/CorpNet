@@ -45,7 +45,6 @@ public class ChatServer {
         server.registerServerListerner(new DataReceivedListener() {
             @Override
             public void recivedMessage(Message message) {
-                System.out.println("Recived something");
                 Object obj = SerializationUtils.getInstance().deserialize(message.getData());
                 if (obj instanceof Classes.RegisterNick) {
                     Classes.RegisterNick regNick = (Classes.RegisterNick) obj;
@@ -56,7 +55,7 @@ public class ChatServer {
                     server.sendReliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
                 } else if (obj instanceof Classes.SendMessage) {
                     sendMessage = (Classes.SendMessage) obj;
-                    server.sendReliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
+                    server.sendUnreliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
                 }
             }
 

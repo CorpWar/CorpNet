@@ -69,7 +69,7 @@ public class ChatClient {
             public void run () {
                 Classes.SendMessage sendMessage = new Classes.SendMessage();
                 sendMessage.message = chatFrame.getSendText();
-                client.sendReliableData(SerializationUtils.getInstance().serialize(sendMessage));
+                client.sendUnreliableData(SerializationUtils.getInstance().serialize(sendMessage));
             }
         });
         chatFrame.setCloseListener(new Runnable() {
@@ -83,6 +83,25 @@ public class ChatClient {
         Random rand = new Random();
         nick.nickname = "test-" + rand.nextInt(10000);
         client.sendReliableData(SerializationUtils.getInstance().serialize(nick));
+
+        SwingWorker worker = new SwingWorker() {
+            @Override
+            protected Object doInBackground() throws Exception {
+                int i = 0;
+                Classes.SendMessage sendMessage = new Classes.SendMessage();
+                sendMessage.message = " nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
+                while (true) {
+                    Thread.sleep(50);
+                    client.sendUnreliableData(SerializationUtils.getInstance().serialize(sendMessage));
+                    if (i > 10000000) {
+                        break;
+                    }
+                    i++;
+                }
+                return null;
+            }
+        };
+        worker.execute();
     }
 
     static private class ChatFrame extends JFrame {

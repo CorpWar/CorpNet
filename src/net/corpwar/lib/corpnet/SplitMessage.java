@@ -24,10 +24,12 @@ public class SplitMessage implements Comparable<SplitMessage>{
 
     private int sequenceId;
     private byte[] data;
+    private long createTime;
 
     public SplitMessage(int sequenceId, byte[] data) {
         this.sequenceId = sequenceId;
         this.data = data;
+        createTime = System.currentTimeMillis();
     }
 
     public Integer getSequenceId() {
@@ -36,6 +38,10 @@ public class SplitMessage implements Comparable<SplitMessage>{
 
     public byte[] getData() {
         return data;
+    }
+
+    public long getCreateTime() {
+        return createTime;
     }
 
     @Override

@@ -38,7 +38,7 @@ public class Server {
     private int protocalVersion = "Protocal 0.1".hashCode();
 
     // Max size that can be sent in one package
-    private int bufferSize = 90;
+    private int bufferSize = 512;
 
     /**
      * This should be same as client
@@ -120,6 +120,22 @@ public class Server {
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
         clients = new ArrayList<Connection>(maxConnections);
         this.maxConnections = maxConnections;
+    }
+
+    /**
+     * Create new server and set port, ip to liston on, max connections and protocal version name. Must be same on server and client.
+     * @param port
+     * @param ipAdress
+     * @param maxConnections
+     * @param protocalVersionName
+     */
+    public Server(int port, String ipAdress, int maxConnections, String protocalVersionName) {
+        this.port = port;
+        this.ipAdress = ipAdress;
+        byteBuffer = ByteBuffer.allocate(byteBufferSize);
+        clients = new ArrayList<Connection>(maxConnections);
+        this.maxConnections = maxConnections;
+        protocalVersion = protocalVersionName.hashCode();
     }
 
     /**
@@ -368,6 +384,22 @@ public class Server {
         }
     }
 
+    public synchronized void removeInactiveSplitMessages() {
+        if (serverThread != null && serverThread.isAlive()) {
+            long currentTime = System.currentTimeMillis();
+            for (int i = clients.size() - 1; i >= 0; i--) {
+                Connection connection = clients.get(i);
+                Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
+                for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
+                    Integer splitId = j.next();
+                    if (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime) {
+                        j.remove();
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Send a message to a specific client
      * @param connection
@@ -571,15 +603,13 @@ public class Server {
 
         private void handleSplitMessages(Message message, Connection connection) {
             // If we have started to receive part of split message
+            byte[] data = connection.setSplitMessageData(message.getSplitMessageId(), message.getSequenceId(), message.getData());
+            if (data.length > 0) {
+                message.setData(data);
+                recivedMessage(message);
+            }
             if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
-                byte[] data = connection.setSplitMessageData(message.getSplitMessageId(), message.getSequenceId(), message.getData());
-                if (data.length > 0) {
-                    message.setData(data);
-                    recivedMessage(message);
-                }
                 sendAck(connection, message.getSequenceId());
-            } else if (message.getNetworkSendType() == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
-                // TODO - fix unreliable messages
             }
             connection.updateTime();
         }
@@ -593,6 +623,7 @@ public class Server {
                     connection.setLastPingTime(roundTripTime);
                 }
                 connection.updateTime();
+                tempPackage = null;
             }
         }
     }
@@ -608,6 +639,7 @@ public class Server {
                 if (waitingQue) {
                     checkQue();
                 }
+                removeInactiveSplitMessages();
                 try {
                     Thread.sleep(millisecondsToRecheckConnection);
                 } catch (InterruptedException e) {
