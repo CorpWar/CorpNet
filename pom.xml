@@ -6,7 +6,7 @@
 
     <groupId>net.corpwar.lib</groupId>
     <artifactId>corpnet</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>CorpNet</name>
