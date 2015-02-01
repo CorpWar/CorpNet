@@ -10,7 +10,7 @@ This library work on both desktop and on Android.
 
 ## How to get going
 
-Head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go. Or just use the source from here to get the latest update.
+Head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go. Or just use the source from here to get the latest updates.
 
 ## Changes and limitation from normal UDP
 
@@ -19,16 +19,16 @@ There have been some things added to normal UDP to get it more reliable.
 - You can send reliable package and know it will be delivered to the other side.
 - You will be informed if someone get disconnected.
 - Every package have a unique id number.
-- You can get information how long packages take to send. 
+- You can get information how long packages take to send.
+- If packages are bigger then max package size (default 512) then it will be split. If an unreliable package don't arrive the entire message will be discarded. Reliable messages will always be delivered.
  
 There are a few things that are not handled. Or should be implemented.
 
-- If you send packages over max buffer size (default 4096), then you need to handle this for your self. (This is work in progress to handle bigger packages that can be split in multiple packages)
 - Packages can come in another order then you send them, if this is a problem you have to deal with it your self.
 - There are no flow control so if you send to many packages you might flood the connection.
 
-Default max package size are set to 4096 bytes. 
-If you send data that are larger then this buffer and it need to be split in many packages then you need to make sure the data are received in the correct order. (Working on this one)
+Default max package size are set to 512 bytes. After that it will be split up in smaller chunks.
+If split packages are arrived in the wrong order then the framework will handle it.
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
 
