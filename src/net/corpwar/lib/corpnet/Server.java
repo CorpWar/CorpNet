@@ -21,7 +21,6 @@ package net.corpwar.lib.corpnet;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -392,7 +391,7 @@ public class Server {
                 Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
                 for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
                     Integer splitId = j.next();
-                    if (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime) {
+                    if ((connection.getSplitMessageData().get(splitId) != null && connection.getSplitMessageData().get(splitId).get(0) != null) && (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
                         j.remove();
                     }
                 }
@@ -492,7 +491,7 @@ public class Server {
     private class ServerThread extends Thread {
 
         private NetworkPackage tempPackage;
-        private ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize);
+        private final ByteBuffer byteBuffer = ByteBuffer.allocate(bufferSize);
 
         @Override
         public void run() {
@@ -513,9 +512,10 @@ public class Server {
             while(running) {
                 try {
                     datagramSocket.receive(incoming);
-                    byte[] data = incoming.getData();
                     byteBuffer.clear();
-                    byteBuffer.put(Arrays.copyOfRange(data, 0, byteBufferSize));
+                    byteBuffer.limit(incoming.getLength());
+                    byteBuffer.put(incoming.getData(), 0, incoming.getLength());
+                    byteBuffer.flip();
                     if (byteBuffer.getInt(0) != protocalVersion) {
                         continue;
                     }
@@ -558,14 +558,14 @@ public class Server {
                     if (byteBuffer.get(4) == NetworkSendType.ACK.getTypeCode()) {
                         if (incoming.getLength() == 13) {
                             if (workingClient != -1) {
-                                verifyAck(clients.get(workingClient), ByteBuffer.wrap(data, 9, 13).getInt());
+                                verifyAck(clients.get(workingClient), byteBuffer.getInt(9)); //ByteBuffer.wrap(data, 9, 13).getInt());
                             }
 
                             // Must be a better way here, change from Deque to ????
                             if (waitingQue) {
                                 for (Connection connection : waitingQueArray) {
                                     if (connection.equals(tempConnection)) {
-                                        verifyAck(connection, ByteBuffer.wrap(data, 9, 13).getInt());
+                                        verifyAck(connection, byteBuffer.getInt(9)); //ByteBuffer.wrap(data, 9, 13).getInt());
                                         break;
                                     }
                                 }
@@ -577,13 +577,19 @@ public class Server {
                     message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
 
                     if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA || message.getNetworkSendType() == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
-                        message.setData(Arrays.copyOfRange(data, byteBufferSize + 4, incoming.getLength()));
+                        byte[] tempDataBuffer = new byte[byteBuffer.limit() - 13];
                         message.setSequenceId(byteBuffer.getInt(5));
-                        message.setSplitMessageId(new BigInteger(Arrays.copyOfRange(data, byteBufferSize, byteBufferSize + 4)).intValue());
+                        message.setSplitMessageId(byteBuffer.getInt(9)); // new BigInteger(Arrays.copyOfRange(data, byteBufferSize, byteBufferSize + 4)).intValue());
                         message.setConnectionID(clients.get(workingClient).getConnectionId());
+                        byteBuffer.position(13);
+                        byteBuffer.get(tempDataBuffer, 0, tempDataBuffer.length);
+                        message.setData(tempDataBuffer);
                         handleSplitMessages(message, clients.get(workingClient));
                     } else {
-                        message.setData(Arrays.copyOfRange(data, byteBufferSize, incoming.getLength()));
+                        byte[] tempDataBuffer = new byte[byteBuffer.limit() - 9];
+                        byteBuffer.position(9);
+                        byteBuffer.get(tempDataBuffer, 0, tempDataBuffer.length);
+                        message.setData(tempDataBuffer);
                         message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
                         message.setSequenceId(byteBuffer.getInt(5));
                         message.setConnectionID(clients.get(workingClient).getConnectionId());

@@ -35,7 +35,7 @@ public class Client {
     private int protocalVersion = "Protocal 0.1".hashCode();
 
     // Max size that can be sent in one package
-    private final int bufferSize;
+    private final int bufferSize = 512;
 
     /**
      * This should be same as the server
@@ -77,7 +77,7 @@ public class Client {
      * Create new client
      */
     public Client() {
-        bufferSize = 512;
+
         try {
             sock = new DatagramSocket();
         } catch (SocketException e) {
@@ -91,7 +91,6 @@ public class Client {
      * @param serverIP
      */
     public Client(int port, String serverIP) {
-        bufferSize = 512;
         try {
             sock = new DatagramSocket();
             if (clientThread == null || !clientThread.isAlive()) {
@@ -111,7 +110,6 @@ public class Client {
      * @param protocalVersionName
      */
     public Client(int port, String serverIP, String protocalVersionName) {
-        bufferSize = 512;
         protocalVersion = protocalVersionName.hashCode();
         try {
             sock = new DatagramSocket();
@@ -272,7 +270,7 @@ public class Client {
             Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
             for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
                 Integer splitId = j.next();
-                if (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime) {
+                if ((connection.getSplitMessageData().get(splitId) != null && connection.getSplitMessageData().get(splitId).get(0) != null) && (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
                     j.remove();
                 }
             }
@@ -431,7 +429,7 @@ public class Client {
                         message.setSplitMessageId(new BigInteger(Arrays.copyOfRange(data, byteBufferSize, byteBufferSize + 4)).intValue());
                         handleSplitMessages(message);
                     } else {
-                        message.setData(Arrays.copyOfRange(data, byteBufferSize + 4, incoming.getLength()));
+                        message.setData(Arrays.copyOfRange(data, byteBufferSize, incoming.getLength()));
                         message.setSequenceId(byteBuffer.getInt(5));
 
                         if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA) {

@@ -18,6 +18,9 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.util.SplitMessageListPool;
+import net.corpwar.lib.corpnet.util.SplitMessagePool;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -67,6 +70,10 @@ public class Connection {
     private Map<Integer, List<SplitMessage>> splitMessageData = new ConcurrentHashMap<Integer, List<SplitMessage>>();
 
     private ByteArrayOutputStream splitMessageoutputStream = new ByteArrayOutputStream();
+
+    private SplitMessagePool splitMessagePool = new SplitMessagePool();
+
+    private SplitMessageListPool splitMessageListPool = new SplitMessageListPool();
 
     public Connection() {
 
@@ -189,9 +196,10 @@ public class Connection {
         return splitMessageData;
     }
 
-    public byte[] setSplitMessageData(int splitId, int messageId, byte[] data) {
+    public synchronized byte[] setSplitMessageData(int splitId, int messageId, byte[] data) {
         if (splitMessageData.containsKey(splitId)) {
-            SplitMessage splitMessage = new SplitMessage(messageId, data);
+            SplitMessage splitMessage = splitMessagePool.borrow();
+            splitMessage.setValues(messageId, data);
             List<SplitMessage> splitMessages = splitMessageData.get(splitId);
             if (splitMessages.contains(splitMessage)) {
                 return new byte[0];
@@ -212,12 +220,20 @@ public class Connection {
             int hashCode = ByteBuffer.wrap(alldata, alldata.length - 4, 4).getInt();
             byte[] receivedData = Arrays.copyOfRange(alldata, 0, alldata.length - 4);
             if (Arrays.hashCode(receivedData) == hashCode) {
-                splitMessageData.remove(messageId);
+                List<SplitMessage> splitMessageList = splitMessageData.remove(splitId);
+                if (splitMessageList != null) {
+                    for (int i = splitMessageList.size() - 1; i >= 0; i--) {
+                        splitMessagePool.giveBack(splitMessageList.get(i));
+                    }
+                }
+                splitMessageListPool.giveBack(splitMessageList);
                 return receivedData;
             }
         } else {
-            SplitMessage splitMessage = new SplitMessage(messageId, data);
-            List<SplitMessage> splitMessages = new ArrayList<SplitMessage>();
+            SplitMessage splitMessage = splitMessagePool.borrow();
+            splitMessage.setValues(messageId, data);
+            List<SplitMessage> splitMessages = splitMessageListPool.borrow();
+            splitMessages.clear();
             splitMessages.add(splitMessage);
             splitMessageData.put(splitId, splitMessages);
         }

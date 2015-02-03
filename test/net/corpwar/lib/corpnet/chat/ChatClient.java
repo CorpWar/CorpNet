@@ -93,7 +93,7 @@ public class ChatClient {
                 while (true) {
                     Thread.sleep(50);
                     client.sendUnreliableData(SerializationUtils.getInstance().serialize(sendMessage));
-                    if (i > 10000000) {
+                    if (i > 100000000) {
                         break;
                     }
                     i++;

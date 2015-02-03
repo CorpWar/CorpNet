@@ -26,7 +26,16 @@ public class SplitMessage implements Comparable<SplitMessage>{
     private byte[] data;
     private long createTime;
 
+    public SplitMessage() {
+    }
+
     public SplitMessage(int sequenceId, byte[] data) {
+        this.sequenceId = sequenceId;
+        this.data = data;
+        createTime = System.currentTimeMillis();
+    }
+
+    public void setValues(int sequenceId, byte[] data) {
         this.sequenceId = sequenceId;
         this.data = data;
         createTime = System.currentTimeMillis();
