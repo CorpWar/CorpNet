@@ -268,6 +268,14 @@ public class Server {
     }
 
     /**
+     * Send an unreliable message to all clients that is connected
+     * @param sendObject
+     */
+    public <T> void sendUnreliableObjectToAllClients(T sendObject) {
+        sendUnreliableToAllClients(SerializationUtils.getInstance().serialize(sendObject));
+    }
+
+    /**
      * Use this if you don't care if the message get to the client
      * @param dataToSend
      */
@@ -278,6 +286,37 @@ public class Server {
     }
 
     /**
+     * Send unreliable messages to all clients except those in the list
+     * @param sendObject
+     * @param excludedClients
+     */
+    public <T> void sendUnreliableObjectToAllExcept(T sendObject, List<UUID> excludedClients) {
+        sendUnreliableToAllExcept(SerializationUtils.getInstance().serialize(sendObject), excludedClients);
+    }
+
+    /**
+     * Send unreliable messages to all except those in the listUse this if it is rely important the message get to the client except the client with the uuid
+     * @param dataToSend
+     * @param uuid
+     */
+    public void sendUnreliableToAllExcept(byte[] dataToSend, List<UUID> exceptClients) {
+        for (int i = clients.size() - 1; i >= 0; i--) {
+            Connection connection = clients.get(i);
+            if (!exceptClients.contains(connection.getConnectionId())) {
+                sendData(connection, dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+            }
+        }
+    }
+
+    /**
+     * Send an unreliable message to all clients that is connected
+     * @param sendObject
+     */
+    public <T> void sendReliableObjectToAllClients(T sendObject) {
+        sendReliableToAllClients(SerializationUtils.getInstance().serialize(sendObject));
+    }
+
+    /**
      * Use this if it is rely important the message get to the client
      * @param dataToSend
      */
@@ -285,6 +324,15 @@ public class Server {
         for (int i = clients.size() - 1; i >= 0; i--) {
             sendData(clients.get(i), dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
         }
+    }
+
+    /**
+     * Send Reliable messages to all clients except those in the list
+     * @param sendObject
+     * @param excludedClients
+     */
+    public <T> void sendReliableObjectToAllExcept(T sendObject, List<UUID> excludedClients) {
+        sendReliableToAllExcept(SerializationUtils.getInstance().serialize(sendObject), excludedClients);
     }
 
     /**

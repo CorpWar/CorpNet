@@ -82,7 +82,7 @@ public class ChatClient {
         Classes.RegisterNick nick = new Classes.RegisterNick();
         Random rand = new Random();
         nick.nickname = "test-" + rand.nextInt(10000);
-        client.sendReliableData(SerializationUtils.getInstance().serialize(nick));
+        client.sendReliableDataObject(nick);
 
         SwingWorker worker = new SwingWorker() {
             @Override
@@ -92,7 +92,7 @@ public class ChatClient {
                 sendMessage.message = " nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
                 while (true) {
                     Thread.sleep(50);
-                    client.sendUnreliableData(SerializationUtils.getInstance().serialize(sendMessage));
+                    client.sendUnreliableDataObject(sendMessage);
                     if (i > 100000000) {
                         break;
                     }

@@ -18,6 +18,8 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.util.SerializationUtils;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.*;
@@ -204,8 +206,19 @@ public class Client {
         this.millisecondsToRecheckConnection = millisecondsToRecheckConnection;
     }
 
+    /**
+     * Send a ping to server to check if it is there
+     */
     public void sendPing() {
         sendData(new byte[0], NetworkSendType.PING);
+    }
+
+    /**
+     * Send an unreliable object to server. Just a simpler way then send a byte[]
+     * @param sendObjct
+     */
+    public <T> void sendUnreliableDataObject(T sendObjct) {
+        sendUnreliableData(SerializationUtils.getInstance().serialize(sendObjct));
     }
 
     /**
@@ -214,6 +227,14 @@ public class Client {
      */
     public void sendUnreliableData(byte[] sendData) {
         sendData(sendData, NetworkSendType.UNRELIABLE_GAME_DATA);
+    }
+
+    /**
+     * Send a reliable object to server. Just a simpler way then send a byte[]
+     * @param sendObjct
+     */
+    public <T> void sendReliableDataObject(T sendObjct) {
+        sendReliableData(SerializationUtils.getInstance().serialize(sendObjct));
     }
 
     /**

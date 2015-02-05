@@ -38,7 +38,7 @@ public class SerializationUtils {
         return serializationUtils;
     }
 
-    public byte[] serialize(Serializable obj) {
+    public <T> byte[] serialize(T obj) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = null;
         try {
@@ -46,19 +46,19 @@ public class SerializationUtils {
             oos.writeObject(obj);
             oos.reset();
         } catch (IOException e) {
-            LOG.log(Level.FINE, "Error IOException", e);
+            LOG.log(Level.SEVERE, "Error IOException", e);
         } finally {
             if (oos != null) {
                 try {
                     oos.close();
                 } catch (IOException e) {
-                    LOG.log(Level.FINE, "Error IOException", e);
+                    LOG.log(Level.SEVERE, "Error IOException", e);
                 }
             }
             try {
                 baos.close();
             } catch (IOException e) {
-                LOG.log(Level.FINE, "Error IOException", e);
+                LOG.log(Level.SEVERE, "Error IOException", e);
                 }
         }
         byte[] byteObj = baos.toByteArray();
@@ -76,23 +76,23 @@ public class SerializationUtils {
             ois = new ObjectInputStream(bais);
             obj = (T) ois.readObject();
         } catch (IOException e) {
-            LOG.log(Level.FINE, "Error IOException", e);
+            LOG.log(Level.SEVERE, "Error IOException", e);
         } catch (ClassNotFoundException e) {
-            LOG.log(Level.FINE, "Error Class not found", e);
+            LOG.log(Level.SEVERE, "Error Class not found", e);
             return null;
         } finally {
             if (bais != null) {
                 try {
                     bais.close();
                 } catch (IOException e) {
-                    LOG.log(Level.FINE, "Error IOException", e);
+                    LOG.log(Level.SEVERE, "Error IOException", e);
                 }
             }
             if (ois != null) {
                 try {
                     ois.close();
                 } catch (IOException e) {
-                    LOG.log(Level.FINE, "Error IOException", e);
+                    LOG.log(Level.SEVERE, "Error IOException", e);
                 }
             }
         }
