@@ -122,7 +122,7 @@ public class Server {
     }
 
     /**
-     * Create new server and set port, ip to liston on, max connections and protocal version name. Must be same on server and client.
+     * Create new server and set port, ip to liston on, max connections and protocal version name, version must be same on server and client.
      * @param port
      * @param ipAdress
      * @param maxConnections
@@ -309,7 +309,7 @@ public class Server {
     }
 
     /**
-     * Send an unreliable message to all clients that is connected
+     * Send an reliable message to all clients that is connected
      * @param sendObject
      */
     public <T> void sendReliableObjectToAllClients(T sendObject) {
