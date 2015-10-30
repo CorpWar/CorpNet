@@ -29,17 +29,21 @@ public class NetworkPackage {
     // When did we send the data
     private long sentTime;
 
-    private long ackTimeReceived;
+    // How many times the package have tried to be resent
+    private int resent = 0;
 
     private int splitSequenceNumber;
+
+    private boolean resentPackage = false;
 
     private NetworkSendType networkSendType;
 
     public NetworkPackage() {
     }
 
-    public NetworkPackage(int sequenceNumber) {
+    public NetworkPackage(int sequenceNumber, NetworkSendType networkSendType) {
         this.sequenceNumber = sequenceNumber;
+        this.networkSendType = networkSendType;
         sentTime = System.currentTimeMillis();
     }
 
@@ -60,7 +64,9 @@ public class NetworkPackage {
 
     public void resendData(int sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
-        sentTime = System.currentTimeMillis();
+        this.sentTime = System.currentTimeMillis();
+        resentPackage = true;
+        resent++;
     }
 
     public int getSequenceNumber() {
@@ -79,12 +85,8 @@ public class NetworkPackage {
         return sentTime;
     }
 
-    public long getAckTimeReceived() {
-        return ackTimeReceived;
-    }
-
-    public void setAckTimeReceived(long ackTimeReceived) {
-        this.ackTimeReceived = ackTimeReceived;
+    public int getResent() {
+        return resent;
     }
 
     public NetworkSendType getNetworkSendType() {
@@ -93,5 +95,9 @@ public class NetworkPackage {
 
     public int getSplitSequenceNumber() {
         return splitSequenceNumber;
+    }
+
+    public boolean isResentPackage() {
+        return resentPackage;
     }
 }

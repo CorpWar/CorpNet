@@ -18,6 +18,7 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.util.SendDataQue;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
 
 import java.io.IOException;
@@ -210,7 +211,7 @@ public class Client {
      * Send a ping to server to check if it is there
      */
     public void sendPing() {
-        sendData(new byte[0], NetworkSendType.PING);
+        connection.addToSendQue(new byte[0], NetworkSendType.PING);
     }
 
     /**
@@ -226,7 +227,7 @@ public class Client {
      * @param sendData
      */
     public void sendUnreliableData(byte[] sendData) {
-        sendData(sendData, NetworkSendType.UNRELIABLE_GAME_DATA);
+        connection.addToSendQue(sendData, NetworkSendType.UNRELIABLE_GAME_DATA);
     }
 
     /**
@@ -242,7 +243,7 @@ public class Client {
      * @param sendData
      */
     public void sendReliableData(byte[] sendData) {
-        sendData(sendData, NetworkSendType.RELIABLE_GAME_DATA);
+        connection.addToSendQue(sendData, NetworkSendType.RELIABLE_GAME_DATA);
     }
 
     /**
@@ -250,9 +251,12 @@ public class Client {
      */
     public synchronized void resendData() {
         long currentTime = System.currentTimeMillis();
+        long smoothTime = connection.getSmoothRoundTripTime();
         for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
-            if ((currentTime - networkPackage.getSentTime() - Math.max(millisecondsBetweenResend, connection.getSmoothRoundTripTime() * 1.1)) > 0) {
+            if ((currentTime - networkPackage.getSentTime() - Math.max(millisecondsBetweenResend, smoothTime * networkPackage.getResent())) > 0) {
+                System.out.println("resend: " + networkPackage.getNetworkSendType() + " sequence: " + networkPackage.getSequenceNumber());
                 try {
+                    networkPackage.resendData(networkPackage.getSequenceNumber());
                     if (networkPackage.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                         resendByteBuffer = ByteBuffer.allocate(byteBufferSize + 4 + networkPackage.getDataSent().length);
                         resendByteBuffer.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).putInt(networkPackage.getSplitSequenceNumber()).put(networkPackage.getDataSent());
@@ -264,12 +268,36 @@ public class Client {
                     sendData = resendByteBuffer.array();
                     dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                     sock.send(dp);
-                    networkPackage.resendData(networkPackage.getSequenceNumber());
+
                 } catch (IOException e) {
                     LOG.log(Level.SEVERE, "Error send data", e);
                 }
             }
         }
+    }
+
+    private synchronized void sendFromQue() {
+        if (!running) {
+            return;
+        }
+        if (connection.getNextSendQueData()) {
+            System.out.println("sendFromQue: " + connection.getSendDataQueList().size() + " roundtrip:" + connection.getSmoothRoundTripTime());
+            Iterator<SendDataQue> iter = connection.getSendDataQueList().iterator();
+            while (iter.hasNext()) {
+                SendDataQue sendDataQue = iter.next();
+                sendData(sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
+                connection.getSendDataQuePool().giveBack(sendDataQue);
+                iter.remove();
+            }
+            connection.setLastSentMessageTime(System.currentTimeMillis());
+        }
+//        SendDataQue sendDataQue = connection.getNextSendQueData();
+//        if (sendDataQue != null) {
+//            sendData(sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
+//            connection.getSendDataQuePool().giveBack(sendDataQue);
+//            sendFromQue();
+//        }
+//        connection.setLastSentMessageTime(System.currentTimeMillis());
     }
 
     /**
@@ -371,6 +399,11 @@ public class Client {
                     }
                 }
             }
+            if (sendingPackage != null) {
+                LOG.log(Level.FINEST, "SendData: " + sendingPackage.getSequenceNumber() + " type: " + sendingPackage.getNetworkSendType().name());
+            } else {
+                LOG.log(Level.SEVERE, "ERROR!!!1");
+            }
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Error send data", e);
         }
@@ -378,6 +411,11 @@ public class Client {
 
     private synchronized void sendAck(int sequenceNumberToAck) {
         try {
+//            try {
+//                Thread.sleep((long)(Math.random() * 500));
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             connection.setReceivedPackageStack(sequenceNumberToAck);
             ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + 4);
             sendingPackage = connection.getLastSequenceNumber();
@@ -462,6 +500,7 @@ public class Client {
 
                 } catch (IOException e) {
                     LOG.log(Level.SEVERE, "Error receive data", e);
+                    running = false;
                 }
             }
         }
@@ -484,6 +523,7 @@ public class Client {
             if (tempPackage != null) {
                 long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
                 connection.getRoundTripTimes().push(roundTripTime);
+                //System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }
@@ -499,6 +539,7 @@ public class Client {
         public void run() {
             while (running) {
                 resendData();
+                sendFromQue();
                 disconnectInactiveServer();
                 removeInactiveSplitMessages();
                 try {

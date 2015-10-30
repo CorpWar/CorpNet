@@ -18,6 +18,8 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.util.SendDataQue;
+import net.corpwar.lib.corpnet.util.SendDataQuePool;
 import net.corpwar.lib.corpnet.util.SplitMessageListPool;
 import net.corpwar.lib.corpnet.util.SplitMessagePool;
 
@@ -27,6 +29,7 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * Handle every connection so we can send data correct
@@ -51,17 +54,33 @@ public class Connection {
     // The last sent packages that waiting for ack
     private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<Integer, NetworkPackage>(100);
 
-    // The last 100 received packages
+    // The last 500 received packages
     private SizedStack<Integer> receivedPackageStack = new SizedStack<Integer>(500);
 
     // If keep alive are enabled use this to check when to send a new ping to this connection
     private long nextKeepAlive;
 
-    // How long have the last 15 round trips taken
-    private final SizedStack<Long> roundTripTimes = new SizedStack<Long>(15);
+    // How long have the last 40 round trips taken
+    private final SizedStack<Long> roundTripTimes = new SizedStack<Long>(40);
 
     // How long did the last ping take
     private long lastPingTime;
+
+    // To calculate how fast we can send so we don't flood the connection
+    private long lastSentMessageTime = 0;
+
+    // If need to drop an unreliable message to flood protection we keep track how many in a row that is happening to
+    // let some of them through
+    private int droppedUnreliableMessages = 0;
+
+    // When there was an unreliable message sent out
+    private long lastAddedUnreliableMessage = 0;
+
+    // All the messages that should be sent
+    private Deque<SendDataQue> sendDataQueList = new ConcurrentLinkedDeque<SendDataQue>(); //ArrayDeque<SendDataQue>(50);
+
+    // Pool to handle all sendDataQues
+    private SendDataQuePool sendDataQuePool = new SendDataQuePool();
 
     // if we need to split a message, what sequence number should the message get
     private int globalSplitSequenceNumber = 1;
@@ -115,7 +134,7 @@ public class Connection {
         return lastRecived;
     }
 
-    public NetworkPackage getLastSequenceNumber(byte[] data, NetworkSendType sendType) {
+    public synchronized NetworkPackage getLastSequenceNumber(byte[] data, NetworkSendType sendType) {
         NetworkPackage networkPackage;
         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.PING) {
             networkPackage = new NetworkPackage(localSequenceNumber, data, sendType);
@@ -124,7 +143,7 @@ public class Connection {
             networkPackage = new NetworkPackage(localSequenceNumber, data, sendType, globalSplitSequenceNumber);
             networkPackageArrayMap.put(localSequenceNumber, networkPackage);
         } else {
-            networkPackage = new NetworkPackage(localSequenceNumber);
+            networkPackage = new NetworkPackage(localSequenceNumber, sendType);
         }
 
         if (localSequenceNumber == Integer.MAX_VALUE) {
@@ -176,6 +195,61 @@ public class Connection {
         } else {
             return totalTime / roundTripTimes.size();
         }
+    }
+
+    public long getLastSentMessageTime() {
+        return lastSentMessageTime;
+    }
+
+    public void setLastSentMessageTime(long lastSentMessageTime) {
+        this.lastSentMessageTime = lastSentMessageTime;
+    }
+
+    public void addToSendQue(byte[] bytes, NetworkSendType networkSendType) {
+        SendDataQue sendDataQue = sendDataQuePool.borrow();
+        sendDataQue.setValues(bytes, networkSendType);
+
+        // If 2 or less in the que we add the messages else handle specially
+        if (sendDataQueList.size() <= 2) {
+            sendDataQueList.add(sendDataQue);
+            droppedUnreliableMessages = 0;
+        } else {
+            if (networkSendType == NetworkSendType.RELIABLE_GAME_DATA || networkSendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
+                sendDataQueList.add(sendDataQue);
+            } else if (networkSendType == NetworkSendType.UNRELIABLE_GAME_DATA || networkSendType == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
+                long currentTime = System.currentTimeMillis();
+                if (droppedUnreliableMessages > 20 || (currentTime - lastAddedUnreliableMessage - 1000) > 0) {
+                    sendDataQueList.add(sendDataQue);
+                    droppedUnreliableMessages = 0;
+                    lastAddedUnreliableMessage = currentTime;
+                } else {
+                    droppedUnreliableMessages++;
+                }
+            } else {
+                sendDataQueList.addFirst(sendDataQue);
+            }
+        }
+    }
+
+    public boolean getNextSendQueData() {
+        long currentTime = System.currentTimeMillis();
+        if (sendDataQueList.size() == 0) {
+            return false;
+        } else {
+            if (lastSentMessageTime - currentTime + getSmoothRoundTripTime() < 0) {
+                return true; //sendDataQueList.remove();
+            } else {
+                return false;
+            }
+        }
+    }
+
+    public Deque<SendDataQue> getSendDataQueList() {
+        return sendDataQueList;
+    }
+
+    public SendDataQuePool getSendDataQuePool() {
+        return sendDataQuePool;
     }
 
     public long getLastPingTime() {

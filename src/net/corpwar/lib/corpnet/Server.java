@@ -18,6 +18,7 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.util.SendDataQue;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
 
 import java.io.IOException;
@@ -281,7 +282,7 @@ public class Server {
      */
     public void sendUnreliableToAllClients(byte[] dataToSend) {
         for (int i = clients.size() - 1; i >= 0; i--) {
-            sendData(clients.get(i), dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+            clients.get(i).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
         }
     }
 
@@ -303,7 +304,7 @@ public class Server {
         for (int i = clients.size() - 1; i >= 0; i--) {
             Connection connection = clients.get(i);
             if (!exceptClients.contains(connection.getConnectionId())) {
-                sendData(connection, dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+                connection.addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
             }
         }
     }
@@ -322,7 +323,7 @@ public class Server {
      */
     public void sendReliableToAllClients(byte[] dataToSend) {
         for (int i = clients.size() - 1; i >= 0; i--) {
-            sendData(clients.get(i), dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
+            clients.get(i).addToSendQue(dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
         }
     }
 
@@ -344,7 +345,7 @@ public class Server {
         for (int i = clients.size() - 1; i >= 0; i--) {
             Connection connection = clients.get(i);
             if (!uuid.contains(connection.getConnectionId())) {
-                sendData(connection, dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
+                connection.addToSendQue(dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
             }
         }
     }
@@ -354,12 +355,19 @@ public class Server {
      */
     public synchronized void resendData() {
         ByteBuffer byteBufferResend;
+
         long currentTime = System.currentTimeMillis();
         for (int i = clients.size() - 1; i >= 0; i--) {
             Connection connection = clients.get(i);
             for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
                 if ((currentTime - networkPackage.getSentTime() - Math.max(milisecoundsBetweenResend, connection.getSmoothRoundTripTime() * 1.1)) > 0) {
-                    try {
+                    SendDataQue sendDataQue = connection.getSendDataQuePool().borrow();
+                    sendDataQue.setValues(networkPackage.getDataSent(), networkPackage.getNetworkSendType());
+                    if (!connection.getSendDataQueList().contains(sendDataQue)) {
+                        connection.getSendDataQueList().addFirst(sendDataQue);
+                    }
+                }
+/*                    try {
                         if (networkPackage.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                             byteBufferResend = ByteBuffer.allocate(byteBufferSize + 4 + networkPackage.getDataSent().length);
                             byteBufferResend.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).putInt(networkPackage.getSplitSequenceNumber()).put(networkPackage.getDataSent());
@@ -374,8 +382,31 @@ public class Server {
                     } catch (IOException e) {
                         LOG.log(Level.SEVERE, "Error resend data", e);
                     }
-                }
+                }*/
             }
+        }
+    }
+
+    public synchronized void sendFromQue() {
+        if (!running) {
+            return;
+        }
+        for (int i = clients.size() - 1; i >= 0; i--) {
+            Connection connection = clients.get(i);
+            sendFromQueConnection(connection);
+        }
+    }
+
+    private synchronized void sendFromQueConnection(Connection connection) {
+        if (connection.getNextSendQueData()) {
+            Iterator<SendDataQue> iter = connection.getSendDataQueList().iterator();
+            while (iter.hasNext()) {
+                SendDataQue sendDataQue = iter.next();
+                sendData(connection, sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
+                connection.getSendDataQuePool().giveBack(sendDataQue);
+                iter.remove();
+            }
+            connection.setLastSentMessageTime(System.currentTimeMillis());
         }
     }
 
@@ -405,7 +436,7 @@ public class Server {
             for (int i = clients.size() - 1; i >= 0; i--) {
                 Connection connection = clients.get(i);
                 if (currentTime > connection.getNextKeepAlive()) {
-                    sendData(connection, new byte[0], NetworkSendType.PING);
+                    connection.addToSendQue(new byte[0], NetworkSendType.PING);
                     connection.setNextKeepAlive(System.currentTimeMillis() + (long) (milisecoundToTimeout * 0.2f));
                 }
             }
@@ -512,6 +543,11 @@ public class Server {
 
     private synchronized void sendAck(Connection connection, int sequenceNumberToAck) {
         try {
+//            try {
+//                Thread.sleep((long)(Math.random() * 100));
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             connection.setReceivedPackageStack(sequenceNumberToAck);
             ByteBuffer byteBufferAck = ByteBuffer.allocate(byteBufferSize + 4);
             NetworkPackage sendingPackage = connection.getLastSequenceNumber();
@@ -580,6 +616,7 @@ public class Server {
                     }
 
                     int workingClient = clients.indexOf(tempConnection);
+
                     // Check if we have already received data then send another ack and don't do anything else
                     if (workingClient != -1) {
                         if (clients.get(workingClient).isReceivedPackageStack(byteBuffer.getInt(5))) {
@@ -651,6 +688,7 @@ public class Server {
                     }
                 } catch (IOException e) {
                     LOG.log(Level.SEVERE, "Error resend data", e);
+                    running = false;
                 }
             }
         }
@@ -673,6 +711,7 @@ public class Server {
             if (tempPackage != null) {
                 long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
                 connection.getRoundTripTimes().push(roundTripTime);
+                System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }
@@ -688,6 +727,7 @@ public class Server {
         public void run() {
             while (running) {
                 resendData();
+                sendFromQue();
                 removeInactiveClients();
                 keepConnectionsAlive();
                 if (waitingQue) {
