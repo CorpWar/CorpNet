@@ -69,7 +69,7 @@ public class ChatClient {
             public void run () {
                 Classes.SendMessage sendMessage = new Classes.SendMessage();
                 sendMessage.message = chatFrame.getSendText();
-                client.sendUnreliableData(SerializationUtils.getInstance().serialize(sendMessage));
+                client.sendReliableDataObject(sendMessage);
             }
         });
         chatFrame.setCloseListener(new Runnable() {
@@ -89,10 +89,18 @@ public class ChatClient {
             protected Object doInBackground() throws Exception {
                 int i = 0;
                 Classes.SendMessage sendMessage = new Classes.SendMessage();
-                sendMessage.message = " nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
+                Random rand = new Random();
+                int clientid = rand.nextInt(100000);
                 while (true) {
-                    Thread.sleep(50);
-                    client.sendUnreliableDataObject(sendMessage);
+                    Thread.sleep(100);
+
+                    if (Math.random() > 0.2) {
+                        sendMessage.message = clientid + " sendReliableDataObject " + rand.nextInt(10000) +" nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
+                        client.sendReliableDataObject(sendMessage);
+                    } else {
+                        sendMessage.message = clientid + "sendUnreliableDataObject " + rand.nextInt(10000) +" nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
+                        client.sendUnreliableDataObject(sendMessage);
+                    }
                     if (i > 100000000) {
                         break;
                     }

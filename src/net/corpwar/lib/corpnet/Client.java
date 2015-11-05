@@ -49,7 +49,7 @@ public class Client {
     private final static int byteBufferSize = 9;
 
     // How long time in milliseconds it must pass before we try to resend data
-    private long millisecondsBetweenResend = 100;
+    private long millisecondsBetweenResend = 500;
 
     // How long time in milliseconds it must pass before a disconnect
     private long millisecondToTimeout = 20000;
@@ -254,7 +254,6 @@ public class Client {
         long smoothTime = connection.getSmoothRoundTripTime();
         for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
             if ((currentTime - networkPackage.getSentTime() - Math.max(millisecondsBetweenResend, smoothTime * networkPackage.getResent())) > 0) {
-                System.out.println("resend: " + networkPackage.getNetworkSendType() + " sequence: " + networkPackage.getSequenceNumber());
                 try {
                     networkPackage.resendData(networkPackage.getSequenceNumber());
                     if (networkPackage.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
@@ -281,23 +280,17 @@ public class Client {
             return;
         }
         if (connection.getNextSendQueData()) {
-            System.out.println("sendFromQue: " + connection.getSendDataQueList().size() + " roundtrip:" + connection.getSmoothRoundTripTime());
             Iterator<SendDataQue> iter = connection.getSendDataQueList().iterator();
             while (iter.hasNext()) {
                 SendDataQue sendDataQue = iter.next();
                 sendData(sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
+
                 connection.getSendDataQuePool().giveBack(sendDataQue);
                 iter.remove();
+
             }
             connection.setLastSentMessageTime(System.currentTimeMillis());
         }
-//        SendDataQue sendDataQue = connection.getNextSendQueData();
-//        if (sendDataQue != null) {
-//            sendData(sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
-//            connection.getSendDataQuePool().giveBack(sendDataQue);
-//            sendFromQue();
-//        }
-//        connection.setLastSentMessageTime(System.currentTimeMillis());
     }
 
     /**
@@ -429,7 +422,8 @@ public class Client {
     }
 
     private class ClientThread extends Thread {
-        private ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize);
+        //private ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize);
+        private final ByteBuffer byteBuffer = ByteBuffer.allocate(bufferSize);
         private NetworkPackage tempPackage;
         private final Message message = new Message();
 
@@ -444,7 +438,12 @@ public class Client {
 
                     byte[] data = incoming.getData();
                     byteBuffer.clear();
-                    byteBuffer.put(Arrays.copyOfRange(data, 0, byteBufferSize));
+                    byteBuffer.limit(incoming.getLength());
+                    byteBuffer.put(incoming.getData(), 0, incoming.getLength());
+                    byteBuffer.flip();
+
+//                    byteBuffer.clear();
+//                    byteBuffer.put(Arrays.copyOfRange(data, 0, byteBufferSize));
                     if (byteBuffer.getInt(0) != protocalVersion) {
                         continue;
                     }
@@ -476,7 +475,7 @@ public class Client {
                     // Verify if we have received ack from before otherwise remove so we don't send more request
                     if (byteBuffer.get(4) == NetworkSendType.ACK.getTypeCode()) {
                         if (incoming.getLength() == 13) {
-                            verifyAck(ByteBuffer.wrap(data, 9, 13).getInt());
+                            verifyAck(byteBuffer.getInt(9));
                         }
                         continue;
                     }
@@ -523,7 +522,7 @@ public class Client {
             if (tempPackage != null) {
                 long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
                 connection.getRoundTripTimes().push(roundTripTime);
-                //System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
+                System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }

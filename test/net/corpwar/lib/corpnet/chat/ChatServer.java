@@ -20,6 +20,7 @@ package net.corpwar.lib.corpnet.chat;
 
 import net.corpwar.lib.corpnet.DataReceivedListener;
 import net.corpwar.lib.corpnet.Message;
+import net.corpwar.lib.corpnet.NetworkSendType;
 import net.corpwar.lib.corpnet.Server;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
 
@@ -55,13 +56,18 @@ public class ChatServer {
                     server.sendReliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
                 } else if (obj instanceof Classes.SendMessage) {
                     sendMessage = (Classes.SendMessage) obj;
-                    server.sendUnreliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
+                    if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA) {
+                        server.sendReliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
+                    } else {
+                        server.sendUnreliableToAllClients(SerializationUtils.getInstance().serialize(sendMessage));
+                    }
+
                 }
             }
 
             @Override
             public void disconnected(UUID connectionId) {
-
+                System.out.println("Disconnected: " + connectionId.toString());
             }
         });
 
