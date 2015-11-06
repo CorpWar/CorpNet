@@ -254,6 +254,7 @@ public class Client {
         long smoothTime = connection.getSmoothRoundTripTime();
         for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
             if ((currentTime - networkPackage.getSentTime() - Math.max(millisecondsBetweenResend, smoothTime * networkPackage.getResent())) > 0) {
+                System.out.println("RESEND! : " + networkPackage.getSequenceNumber());
                 try {
                     networkPackage.resendData(networkPackage.getSequenceNumber());
                     if (networkPackage.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
@@ -346,7 +347,7 @@ public class Client {
         try {
             if (data.length + byteBufferSize <= bufferSize) {
                 sendByteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
-                sendingPackage = connection.getLastSequenceNumber(data, sendType);
+                sendingPackage = connection.getNetworkPackage(data, sendType);
                 sendByteBuffer.putInt(protocalVersion).put((byte) sendType.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).put(data);
                 sendData = sendByteBuffer.array();
                 dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
@@ -363,10 +364,10 @@ public class Client {
                         sendByteBuffer.putInt(protocalVersion);
                         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                             sendByteBuffer.put((byte)NetworkSendType.RELIABLE_SPLIT_GAME_DATA.getTypeCode());
-                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
+                            sendingPackage = connection.getNetworkPackage(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
                         } else {
                             sendByteBuffer.put((byte) NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA.getTypeCode());
-                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA);
+                            sendingPackage = connection.getNetworkPackage(dataToSend, NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA);
                         }
                         sendByteBuffer.putInt(sendingPackage.getSequenceNumber()).putInt(splitId).put(dataToSend);
                         len += bufferSize - byteBufferSize - splitIdSize - 4;
@@ -379,10 +380,10 @@ public class Client {
                         byteBuffer.putInt(protocalVersion);
                         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                             byteBuffer.put((byte)NetworkSendType.RELIABLE_SPLIT_GAME_DATA.getTypeCode());
-                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
+                            sendingPackage = connection.getNetworkPackage(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
                         } else {
                             byteBuffer.put((byte) NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA.getTypeCode());
-                            sendingPackage = connection.getLastSequenceNumber(dataToSend, NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA);
+                            sendingPackage = connection.getNetworkPackage(dataToSend, NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA);
                         }
                         byteBuffer.putInt(sendingPackage.getSequenceNumber()).putInt(splitId).put(dataToSend).putInt(Arrays.hashCode(data));
                         sendData = byteBuffer.array();
@@ -404,14 +405,9 @@ public class Client {
 
     private synchronized void sendAck(int sequenceNumberToAck) {
         try {
-//            try {
-//                Thread.sleep((long)(Math.random() * 500));
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
             connection.setReceivedPackageStack(sequenceNumberToAck);
             ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + 4);
-            sendingPackage = connection.getLastSequenceNumber();
+            sendingPackage = connection.getAckPackage();
             byteBuffer.putInt(protocalVersion).put((byte) NetworkSendType.ACK.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).putInt(sequenceNumberToAck);
             sendData = byteBuffer.array();
             dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
@@ -422,7 +418,7 @@ public class Client {
     }
 
     private class ClientThread extends Thread {
-        //private ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize);
+
         private final ByteBuffer byteBuffer = ByteBuffer.allocate(bufferSize);
         private NetworkPackage tempPackage;
         private final Message message = new Message();
@@ -442,8 +438,6 @@ public class Client {
                     byteBuffer.put(incoming.getData(), 0, incoming.getLength());
                     byteBuffer.flip();
 
-//                    byteBuffer.clear();
-//                    byteBuffer.put(Arrays.copyOfRange(data, 0, byteBufferSize));
                     if (byteBuffer.getInt(0) != protocalVersion) {
                         continue;
                     }
@@ -467,11 +461,7 @@ public class Client {
                         recivedMessage(message);
                         continue;
                     }
-                    // Check if we have already received data then send another ack and don't do anything else
-                    if (connection.isReceivedPackageStack(byteBuffer.getInt(5))) {
-                        sendAck(byteBuffer.getInt(5));
-                        continue;
-                    }
+
                     // Verify if we have received ack from before otherwise remove so we don't send more request
                     if (byteBuffer.get(4) == NetworkSendType.ACK.getTypeCode()) {
                         if (incoming.getLength() == 13) {
@@ -479,6 +469,13 @@ public class Client {
                         }
                         continue;
                     }
+
+                    // Check if we have already received data then send another ack and don't do anything else
+                    if (connection.isReceivedPackageStack(byteBuffer.getInt(5))) {
+                        sendAck(byteBuffer.getInt(5));
+                        continue;
+                    }
+
                     message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
 
                     if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA || message.getNetworkSendType() == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
@@ -522,7 +519,7 @@ public class Client {
             if (tempPackage != null) {
                 long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
                 connection.getRoundTripTimes().push(roundTripTime);
-                System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
+                //System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }

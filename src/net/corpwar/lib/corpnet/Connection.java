@@ -134,7 +134,7 @@ public class Connection {
         return lastRecived;
     }
 
-    public synchronized NetworkPackage getLastSequenceNumber(byte[] data, NetworkSendType sendType) {
+    public synchronized NetworkPackage getNetworkPackage(byte[] data, NetworkSendType sendType) {
         NetworkPackage networkPackage;
         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.PING) {
             networkPackage = new NetworkPackage(localSequenceNumber, data, sendType);
@@ -154,8 +154,8 @@ public class Connection {
         return networkPackage;
     }
 
-    public NetworkPackage getLastSequenceNumber() {
-        return getLastSequenceNumber(new byte[0], NetworkSendType.UNRELIABLE_GAME_DATA);
+    public NetworkPackage getAckPackage() {
+        return getNetworkPackage(new byte[0], NetworkSendType.ACK);
     }
 
     public long getNextKeepAlive() {
@@ -237,7 +237,7 @@ public class Connection {
             return false;
         } else {
             if (lastSentMessageTime - currentTime + getSmoothRoundTripTime() < 0) {
-                return true; //sendDataQueList.remove();
+                return true;
             } else {
                 return false;
             }
