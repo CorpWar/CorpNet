@@ -23,11 +23,11 @@ There have been some things added to normal UDP to get it more reliable.
 - Every package have a unique id number.
 - You can get information how long packages take to send.
 - If packages are bigger then max package size (default 512) then it will be split. If an unreliable package don't arrive the entire message will be discarded. Reliable messages will always be delivered.
+- Flow control implemented. If to much data are sent unreliable messages are dropped. And sents are slowed down if ping goes up.
  
 There are a few things that are not handled. Or should be implemented.
 
 - Packages can come in another order then you send them, if this is a problem you have to deal with it your self.
-- There are no flow control so if you send to many packages you might flood the connection.
 
 Default max package size are set to 512 bytes. After that it will be split up in smaller chunks.
 If split packages are arrived in the wrong order then the framework will handle it.
