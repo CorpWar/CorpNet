@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -88,7 +89,7 @@ public class Server {
     private boolean running = false;
 
     private ServerThread serverThread;
-    private List<Connection> clients;
+    private Map<UUID, Connection> clients;
     private Connection tempConnection = new Connection();
     private HandleConnection handleConnection = new HandleConnection();
 
@@ -104,7 +105,7 @@ public class Server {
         ipAdress = "127.0.0.1";
         port = 7854;
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ArrayList<Connection>(8);
+        clients = new ConcurrentHashMap<UUID, Connection>(8);
         maxConnections = 8;
     }
 
@@ -118,7 +119,7 @@ public class Server {
         this.port = port;
         this.ipAdress = ipAdress;
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ArrayList<Connection>(maxConnections);
+        clients = new ConcurrentHashMap<UUID, Connection>(maxConnections);
         this.maxConnections = maxConnections;
     }
 
@@ -133,7 +134,7 @@ public class Server {
         this.port = port;
         this.ipAdress = ipAdress;
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ArrayList<Connection>(maxConnections);
+        clients = new ConcurrentHashMap<UUID, Connection>(maxConnections);
         this.maxConnections = maxConnections;
         protocalVersion = protocalVersionName.hashCode();
     }
@@ -144,12 +145,13 @@ public class Server {
      * @return
      */
     public Connection getConnectionFromUUID(UUID uuid) {
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            if (clients.get(i).getConnectionId().equals(uuid)) {
-                return clients.get(i);
-            }
-        }
-        return null;
+        return clients.get(uuid);
+//        for (int i = clients.size() - 1; i >= 0; i--) {
+//            if (clients.get(i).getConnectionId().equals(uuid)) {
+//                return clients.get(i);
+//            }
+//        }
+//        return null;
     }
 
     /**
@@ -281,9 +283,22 @@ public class Server {
      * @param dataToSend
      */
     public void sendUnreliableToAllClients(byte[] dataToSend) {
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            clients.get(i).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+        for (Connection connection : clients.values()) {
+            connection.addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
         }
+    }
+
+    public <T> void sendUnreliableObjectToClient(T sendObject, UUID clientID) {
+        sendUnreliableToClient(SerializationUtils.getInstance().serialize(sendObject), clientID);
+    }
+
+    /**
+     * Use this if you don't care if the message get to the client
+     * @param dataToSend
+     * @param clientID
+     */
+    public void sendUnreliableToClient(byte[] dataToSend, UUID clientID) {
+        clients.get(clientID).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
     }
 
     /**
@@ -301,8 +316,7 @@ public class Server {
      * @param uuid
      */
     public void sendUnreliableToAllExcept(byte[] dataToSend, List<UUID> exceptClients) {
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            Connection connection = clients.get(i);
+        for (Connection connection : clients.values()) {
             if (!exceptClients.contains(connection.getConnectionId())) {
                 connection.addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
             }
@@ -322,9 +336,17 @@ public class Server {
      * @param dataToSend
      */
     public void sendReliableToAllClients(byte[] dataToSend) {
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            clients.get(i).addToSendQue(dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
+        for (Connection connection : clients.values()) {
+            connection.addToSendQue(dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
         }
+    }
+
+    public <T> void sendReliableObjectToClient(T sendObject, UUID clientID) {
+        sendReliableToClient(SerializationUtils.getInstance().serialize(sendObject), clientID);
+    }
+
+    public void sendReliableToClient(byte[] sendObject, UUID clientID) {
+        clients.get(clientID).addToSendQue(sendObject, NetworkSendType.RELIABLE_GAME_DATA);
     }
 
     /**
@@ -341,10 +363,9 @@ public class Server {
      * @param dataToSend
      * @param uuid
      */
-    public void sendReliableToAllExcept(byte[] dataToSend, List<UUID> uuid) {
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            Connection connection = clients.get(i);
-            if (!uuid.contains(connection.getConnectionId())) {
+    public void sendReliableToAllExcept(byte[] dataToSend, List<UUID> exceptClients) {
+        for (Connection connection : clients.values()) {
+            if (!exceptClients.contains(connection.getConnectionId())) {
                 connection.addToSendQue(dataToSend, NetworkSendType.RELIABLE_GAME_DATA);
             }
         }
@@ -357,8 +378,7 @@ public class Server {
         ByteBuffer byteBufferResend;
 
         long currentTime = System.currentTimeMillis();
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            Connection connection = clients.get(i);
+        for (Connection connection : clients.values()) {
             long smoothTime = connection.getSmoothRoundTripTime();
             for (NetworkPackage networkPackage : connection.getNetworkPackageArrayMap().values()) {
                 if ((currentTime - networkPackage.getSentTime() - (Math.max(milisecoundsBetweenResend, smoothTime) * networkPackage.getResent())) > 0) {
@@ -386,14 +406,10 @@ public class Server {
         if (!running) {
             return;
         }
-        for (int i = clients.size() - 1; i >= 0; i--) {
-            Connection connection = clients.get(i);
+        for (Connection connection : clients.values()) {
             sendFromQueConnection(connection);
         }
     }
-
-    int TEST = 0;
-
     private synchronized void sendFromQueConnection(Connection connection) {
         if (connection.getNextSendQueData()) {
             Iterator<SendDataQue> iter = connection.getSendDataQueList().iterator();
@@ -414,12 +430,12 @@ public class Server {
     public synchronized void removeInactiveClients() {
         if (serverThread != null && serverThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
-            for (int i = clients.size() - 1; i >= 0; i--) {
-                Connection connection = clients.get(i);
+            Iterator<Connection> it = clients.values().iterator();
+            while (it.hasNext()) {
+                Connection connection = it.next();
                 if ((currentTime - connection.getLastRecived()) > milisecoundToTimeout) {
                     disconnectedClients(connection.getConnectionId());
-                    clients.remove(i);
-
+                    it.remove();
                 }
             }
         }
@@ -431,8 +447,7 @@ public class Server {
     public synchronized void keepConnectionsAlive() {
         if (serverThread != null && serverThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
-            for (int i = clients.size() - 1; i >= 0; i--) {
-                Connection connection = clients.get(i);
+            for (Connection connection : clients.values()) {
                 if (currentTime > connection.getNextKeepAlive()) {
                     connection.addToSendQue(new byte[0], NetworkSendType.PING);
                     connection.setNextKeepAlive(System.currentTimeMillis() + (long) (milisecoundToTimeout * 0.2f));
@@ -447,7 +462,8 @@ public class Server {
     public synchronized void checkQue() {
         if (serverThread != null && serverThread.isAlive()) {
             if (clients.size() < maxConnections && !waitingQueArray.isEmpty()) {
-                clients.add(waitingQueArray.poll());
+                Connection connection = waitingQueArray.poll();
+                clients.put(connection.getConnectionId(), connection);
             }
             Integer queNumber = 1;
             long currentTime = System.currentTimeMillis();
@@ -463,8 +479,7 @@ public class Server {
     public synchronized void removeInactiveSplitMessages() {
         if (serverThread != null && serverThread.isAlive()) {
             long currentTime = System.currentTimeMillis();
-            for (int i = clients.size() - 1; i >= 0; i--) {
-                Connection connection = clients.get(i);
+            for (Connection connection : clients.values()) {
                 Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
                 for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
                     Integer splitId = j.next();
@@ -612,12 +627,14 @@ public class Server {
                     }
 
                     //int workingClient = clients.indexOf(tempConnection);
-                    if (clients.contains(tempConnection)) {
-                        int i = clients.indexOf(tempConnection);
-                        if (i >= 0) {
-                            client = clients.get(i);
-                        }
-                    }
+//                    if (clients.values().contains(tempConnection)) {
+//                        client = clients.get(tempConnection.getConnectionId());
+//                        int i = clients.indexOf(tempConnection);
+//                        if (i >= 0) {
+//                            client = clients.get(i);
+//                        }
+//                    }
+                    client = clients.get(tempConnection.getConnectionId());
 
 
                     // Check if we have already received data then send another ack and don't do anything else
@@ -633,7 +650,7 @@ public class Server {
                         if (keepAlive) {
                             newConnection.setNextKeepAlive(System.currentTimeMillis() + (long)(milisecoundToTimeout * 0.2f));
                         }
-                        clients.add(newConnection);
+                        clients.put(newConnection.getConnectionId(), newConnection);
                         client = newConnection;
 
                     // Check if we have que system enabled and if we have reached max in the que

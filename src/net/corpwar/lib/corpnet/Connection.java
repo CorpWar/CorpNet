@@ -107,6 +107,7 @@ public class Connection {
         this.address = connection.getAddress();
         this.port = connection.getPort();
         this.lastRecived = System.currentTimeMillis();
+        connectionId = UUID.nameUUIDFromBytes((address.toString() + port).getBytes());
     }
 
     public UUID getConnectionId() {
@@ -116,6 +117,7 @@ public class Connection {
     public void updateClient(InetAddress adress, int port) {
         this.address = adress;
         this.port = port;
+        connectionId = UUID.nameUUIDFromBytes((address.toString() + port).getBytes());
     }
 
     public void updateTime() {
