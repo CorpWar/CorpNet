@@ -18,10 +18,7 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
-import net.corpwar.lib.corpnet.util.SendDataQue;
-import net.corpwar.lib.corpnet.util.SendDataQuePool;
-import net.corpwar.lib.corpnet.util.SplitMessageListPool;
-import net.corpwar.lib.corpnet.util.SplitMessagePool;
+import net.corpwar.lib.corpnet.util.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handle every connection so we can send data correct
@@ -50,6 +48,9 @@ public class Connection {
 
     // Unique number for every new packet that is sent
     private int localSequenceNumber = 1;
+
+    // Pool to handle NetworkPackage objects
+    private NetworkPackagePool networkPackagePool = new NetworkPackagePool();
 
     // The last sent packages that waiting for ack
     private Map<Integer, NetworkPackage> networkPackageArrayMap = new ConcurrentHashMap<Integer, NetworkPackage>(100);
@@ -136,16 +137,23 @@ public class Connection {
         return lastRecived;
     }
 
+    public NetworkPackagePool getNetworkPackagePool() {
+        return networkPackagePool;
+    }
+
     public synchronized NetworkPackage getNetworkPackage(byte[] data, NetworkSendType sendType) {
         NetworkPackage networkPackage;
         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.PING) {
-            networkPackage = new NetworkPackage(localSequenceNumber, data, sendType);
+            networkPackage = networkPackagePool.borrow();
+            networkPackage.setValues(localSequenceNumber, data, sendType);
             networkPackageArrayMap.put(localSequenceNumber, networkPackage);
         } else if (sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
-            networkPackage = new NetworkPackage(localSequenceNumber, data, sendType, globalSplitSequenceNumber);
+            networkPackage = networkPackagePool.borrow();
+            networkPackage.setValues(localSequenceNumber, data, sendType, globalSplitSequenceNumber);
             networkPackageArrayMap.put(localSequenceNumber, networkPackage);
         } else {
-            networkPackage = new NetworkPackage(localSequenceNumber, sendType);
+            networkPackage = networkPackagePool.borrow();
+            networkPackage.setValues(localSequenceNumber, sendType);
         }
 
         if (localSequenceNumber == Integer.MAX_VALUE) {

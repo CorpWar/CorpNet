@@ -26,6 +26,7 @@ import java.math.BigInteger;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,6 +76,11 @@ public class Client {
     private ByteBuffer resendByteBuffer;
     private ByteBuffer sendByteBuffer;
 
+    // If we want to simulate delay when we try internaly
+    private boolean simulateDelay = false;
+
+    // How much delay should we simulate
+    private long simulateDelayTimeMin = 100, simulateDelayTimeMax = 500, simulatedDelay = 0;
 
     /**
      * Create new client
@@ -83,8 +89,13 @@ public class Client {
 
         try {
             sock = new DatagramSocket();
+            if (clientThread == null || !clientThread.isAlive()) {
+                connection = new Connection(InetAddress.getByName(defaultHostAddress), defaultPort);
+            }
         } catch (SocketException e) {
             LOG.log(Level.SEVERE, "Error create client", e);
+        } catch (UnknownHostException e) {
+            LOG.log(Level.SEVERE, "Error unknown host ", e);
         }
     }
 
@@ -208,6 +219,25 @@ public class Client {
     }
 
     /**
+     * Switch simulated delay on and of
+     * @param simulateDelay
+     */
+    public void setSimulateDelay(boolean simulateDelay) {
+        this.simulateDelay = simulateDelay;
+        simulatedDelay = ThreadLocalRandom.current().nextLong(simulateDelayTimeMin, simulateDelayTimeMax);
+    }
+
+    /**
+     * Set how much simulated delay should be used
+     * @param simulateDelayTimeMin
+     * @param simulateDelayTimeMax
+     */
+    public void setSimulateDelayTime(long simulateDelayTimeMin, long simulateDelayTimeMax) {
+        this.simulateDelayTimeMin = simulateDelayTimeMin;
+        this.simulateDelayTimeMax = simulateDelayTimeMax;
+    }
+
+    /**
      * Send a ping to server to check if it is there
      */
     public void sendPing() {
@@ -284,6 +314,13 @@ public class Client {
             Iterator<SendDataQue> iter = connection.getSendDataQueList().iterator();
             while (iter.hasNext()) {
                 SendDataQue sendDataQue = iter.next();
+                if (simulateDelay) {
+                    if ((System.currentTimeMillis() - sendDataQue.getAddedTime() - simulatedDelay) < 0) {
+                        continue;
+                    } else {
+                        simulatedDelay = ThreadLocalRandom.current().nextLong(simulateDelayTimeMin, simulateDelayTimeMax);
+                    }
+                }
                 sendData(sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
 
                 connection.getSendDataQuePool().giveBack(sendDataQue);
@@ -313,7 +350,7 @@ public class Client {
             Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
             for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
                 Integer splitId = j.next();
-                if ((connection.getSplitMessageData().get(splitId) != null && connection.getSplitMessageData().get(splitId).get(0) != null) && (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
+                if ((connection.getSplitMessageData().size() > 0 && connection.getSplitMessageData().get(splitId) != null && connection.getSplitMessageData().get(splitId).get(0) != null) && (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
                     j.remove();
                 }
             }
@@ -352,6 +389,7 @@ public class Client {
                 sendData = sendByteBuffer.array();
                 dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                 sock.send(dp);
+                connection.getNetworkPackagePool().giveBack(sendingPackage);
             } else {
                 int len = 0;
                 byte[] dataToSend;
@@ -374,6 +412,7 @@ public class Client {
                         sendData = sendByteBuffer.array();
                         dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                         sock.send(dp);
+                        connection.getNetworkPackagePool().giveBack(sendingPackage);
                     } else {
                         dataToSend = Arrays.copyOfRange(data, len, data.length);
                         ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferSize + splitIdSize + 4 + dataToSend.length);
@@ -389,6 +428,7 @@ public class Client {
                         sendData = byteBuffer.array();
                         dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                         sock.send(dp);
+                        connection.getNetworkPackagePool().giveBack(sendingPackage);
                         break;
                     }
                 }
@@ -412,6 +452,7 @@ public class Client {
             sendData = byteBuffer.array();
             dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
             sock.send(dp);
+            connection.getNetworkPackagePool().giveBack(sendingPackage);
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Error send data", e);
         }

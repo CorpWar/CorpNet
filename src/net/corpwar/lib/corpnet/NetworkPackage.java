@@ -41,7 +41,36 @@ public class NetworkPackage {
     public NetworkPackage() {
     }
 
-    public NetworkPackage(int sequenceNumber, NetworkSendType networkSendType) {
+    public void setValues (int sequenceNumber, NetworkSendType networkSendType) {
+        this.sequenceNumber = sequenceNumber;
+        this.networkSendType = networkSendType;
+        sentTime = System.currentTimeMillis();
+        resetValues();
+    }
+
+    public void setValues (int sequenceNumber, byte[] dataSent, NetworkSendType networkSendType) {
+        this.sequenceNumber = sequenceNumber;
+        this.dataSent = dataSent;
+        sentTime = System.currentTimeMillis();
+        this.networkSendType = networkSendType;
+        resetValues();
+    }
+
+    public void setValues (int sequenceNumber, byte[] dataSent, NetworkSendType networkSendType, int splitSequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+        this.dataSent = dataSent;
+        sentTime = System.currentTimeMillis();
+        this.networkSendType = networkSendType;
+        this.splitSequenceNumber = splitSequenceNumber;
+        resetValues();
+    }
+
+    public void resetValues() {
+        resent = 0;
+        resentPackage = false;
+    }
+
+/*    public NetworkPackage(int sequenceNumber, NetworkSendType networkSendType) {
         this.sequenceNumber = sequenceNumber;
         this.networkSendType = networkSendType;
         sentTime = System.currentTimeMillis();
@@ -60,7 +89,7 @@ public class NetworkPackage {
         sentTime = System.currentTimeMillis();
         this.networkSendType = networkSendType;
         this.splitSequenceNumber = splitSequenceNumber;
-    }
+    }*/
 
     public void resendData(int sequenceNumber) {
         this.sequenceNumber = sequenceNumber;

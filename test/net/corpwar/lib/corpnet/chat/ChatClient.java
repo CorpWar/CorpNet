@@ -44,6 +44,8 @@ public class ChatClient {
 
     public ChatClient() {
         client = new Client();
+        client.setSimulateDelay(true);
+        client.setSimulateDelayTime(100, 1000);
         client.startClient();
 
         client.registerClientListerner(new DataReceivedListener() {
@@ -93,7 +95,7 @@ public class ChatClient {
                 int clientid = rand.nextInt(100000);
                 int count = 0;
                 while (true) {
-                    Thread.sleep(100);
+                    Thread.sleep(500);
 
                     if (Math.random() > 0.5) {
                         sendMessage.message = clientid + " sendReliableDataObject " + count++ +" nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
