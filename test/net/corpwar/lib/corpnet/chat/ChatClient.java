@@ -50,7 +50,7 @@ public class ChatClient {
 
         client.registerClientListerner(new DataReceivedListener() {
             @Override
-            public void recivedMessage(Message message) {
+            public void receivedMessage(Message message) {
                 Object obj = SerializationUtils.getInstance().deserialize(message.getData());
                 if (obj instanceof Classes.SendMessage) {
                     chatFrame.addMessage(((Classes.SendMessage) obj).message);
@@ -95,13 +95,13 @@ public class ChatClient {
                 int clientid = rand.nextInt(100000);
                 int count = 0;
                 while (true) {
-                    Thread.sleep(500);
+                    Thread.sleep(33);
 
                     if (Math.random() > 0.5) {
                         sendMessage.message = clientid + " sendReliableDataObject " + count++ +" nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
                         client.sendReliableDataObject(sendMessage);
                     } else {
-                        sendMessage.message = clientid + "sendUnreliableDataObject " + count++ +" nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
+                        sendMessage.message = clientid + "sendUnreliableDataObject " + count++ +" nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!! nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!! nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!! nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!! nu ska vi skicka jätte mycket data som man bara ska skicka ut tilla massor av clienter bara för att testa om det går att skicka massa data med en sträng. Vem vet vad som kan hända om man gör på detta sättet. Det kanska går jättebra. Vem vet!!";
                         client.sendUnreliableDataObject(sendMessage);
                     }
                     if (i > 100000000) {

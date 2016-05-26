@@ -45,7 +45,7 @@ public class ChatServer {
 
         server.registerServerListerner(new DataReceivedListener() {
             @Override
-            public void recivedMessage(Message message) {
+            public void receivedMessage(Message message) {
                 Object obj = SerializationUtils.getInstance().deserialize(message.getData());
                 if (obj instanceof Classes.RegisterNick) {
                     Classes.RegisterNick regNick = (Classes.RegisterNick) obj;

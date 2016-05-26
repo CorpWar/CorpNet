@@ -22,7 +22,7 @@ import java.util.UUID;
 
 public interface DataReceivedListener {
 
-    public void recivedMessage(Message message);
+    void receivedMessage(Message message);
 
-    public void disconnected(UUID connectionId);
+    void disconnected(UUID connectionId);
 }

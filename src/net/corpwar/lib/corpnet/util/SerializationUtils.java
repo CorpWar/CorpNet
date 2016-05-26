@@ -26,6 +26,7 @@ public class SerializationUtils {
 
     private static SerializationUtils serializationUtils = null;
     private static final Logger LOG = Logger.getLogger(SerializationUtils.class.getName());
+    private static final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
 
     private SerializationUtils() {
@@ -39,7 +40,6 @@ public class SerializationUtils {
     }
 
     public <T> byte[] serialize(T obj) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = null;
         try {
             oos = new ObjectOutputStream(baos);
@@ -55,11 +55,6 @@ public class SerializationUtils {
                     LOG.log(Level.SEVERE, "Error IOException", e);
                 }
             }
-            try {
-                baos.close();
-            } catch (IOException e) {
-                LOG.log(Level.SEVERE, "Error IOException", e);
-                }
         }
         byte[] byteObj = baos.toByteArray();
         baos.reset();
@@ -81,13 +76,6 @@ public class SerializationUtils {
             LOG.log(Level.SEVERE, "Error Class not found", e);
             return null;
         } finally {
-            if (bais != null) {
-                try {
-                    bais.close();
-                } catch (IOException e) {
-                    LOG.log(Level.SEVERE, "Error IOException", e);
-                }
-            }
             if (ois != null) {
                 try {
                     ois.close();

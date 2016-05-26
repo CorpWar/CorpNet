@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handle every connection so we can send data correct
@@ -78,7 +77,7 @@ public class Connection {
     private long lastAddedUnreliableMessage = 0;
 
     // All the messages that should be sent
-    private Deque<SendDataQue> sendDataQueList = new ConcurrentLinkedDeque<SendDataQue>(); //ArrayDeque<SendDataQue>(50);
+    private Deque<SendDataQue> sendDataQueList = new ConcurrentLinkedDeque<SendDataQue>();
 
     // Pool to handle all sendDataQues
     private SendDataQuePool sendDataQuePool = new SendDataQuePool();
@@ -94,6 +93,9 @@ public class Connection {
     private SplitMessagePool splitMessagePool = new SplitMessagePool();
 
     private SplitMessageListPool splitMessageListPool = new SplitMessageListPool();
+
+    // A list of split messages that should be removed
+    private List<Integer> removeSplitMessages = new ArrayList<Integer>();
 
     public Connection() {
 
@@ -304,13 +306,8 @@ public class Connection {
             int hashCode = ByteBuffer.wrap(alldata, alldata.length - 4, 4).getInt();
             byte[] receivedData = Arrays.copyOfRange(alldata, 0, alldata.length - 4);
             if (Arrays.hashCode(receivedData) == hashCode) {
-                List<SplitMessage> splitMessageList = splitMessageData.remove(splitId);
-                if (splitMessageList != null) {
-                    for (int i = splitMessageList.size() - 1; i >= 0; i--) {
-                        splitMessagePool.giveBack(splitMessageList.get(i));
-                    }
-                }
-                splitMessageListPool.giveBack(splitMessageList);
+                removeSplitMessages.add(splitId);
+                removeSplitMessages();
                 return receivedData;
             }
         } else {
@@ -322,6 +319,29 @@ public class Connection {
             splitMessageData.put(splitId, splitMessages);
         }
         return new byte[0];
+    }
+
+    public synchronized void removeSplitMessages() {
+        long currentTime = System.currentTimeMillis();
+        Set<Integer> splitMessageKeySet = getSplitMessageData().keySet();
+        for (Integer splitId : splitMessageKeySet) {
+            if ((getSplitMessageData().size() > 0 &&
+                    getSplitMessageData().get(splitId) != null &&
+                    getSplitMessageData().get(splitId).get(0) != null) &&
+                    (getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
+                removeSplitMessages.add(splitId);
+            }
+        }
+        for (Iterator<Integer> splitId = removeSplitMessages.iterator(); splitId.hasNext();) {
+            List<SplitMessage> splitMessageList = splitMessageData.remove(splitId.next());
+            if (splitMessageList != null) {
+                for (int i = splitMessageList.size() - 1; i >= 0; i--) {
+                    splitMessagePool.giveBack(splitMessageList.get(i));
+                }
+            }
+            splitMessageListPool.giveBack(splitMessageList);
+            splitId.remove();
+        }
     }
 
     @Override

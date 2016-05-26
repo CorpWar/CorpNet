@@ -346,14 +346,7 @@ public class Client {
 
     public synchronized void removeInactiveSplitMessages() {
         if (clientThread != null && clientThread.isAlive()) {
-            long currentTime = System.currentTimeMillis();
-            Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
-            for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
-                Integer splitId = j.next();
-                if ((connection.getSplitMessageData().size() > 0 && connection.getSplitMessageData().get(splitId) != null && connection.getSplitMessageData().get(splitId).get(0) != null) && (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
-                    j.remove();
-                }
-            }
+            connection.removeSplitMessages();
         }
     }
 
@@ -370,7 +363,7 @@ public class Client {
 
     private void recivedMessage(Message message) {
         for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
-            dataReceivedListener.recivedMessage(message);
+            dataReceivedListener.receivedMessage(message);
         }
     }
 
@@ -382,6 +375,7 @@ public class Client {
 
     private synchronized void sendData(byte[] data, NetworkSendType sendType) {
         try {
+            LOG.log(Level.FINEST, "DataSent: " + data.length + " SendType: " + sendType.name());
             if (data.length + byteBufferSize <= bufferSize) {
                 sendByteBuffer = ByteBuffer.allocate(byteBufferSize + data.length);
                 sendingPackage = connection.getNetworkPackage(data, sendType);
@@ -436,7 +430,7 @@ public class Client {
             if (sendingPackage != null) {
                 LOG.log(Level.FINEST, "SendData: " + sendingPackage.getSequenceNumber() + " type: " + sendingPackage.getNetworkSendType().name());
             } else {
-                LOG.log(Level.SEVERE, "ERROR!!!1");
+                LOG.log(Level.SEVERE, "ERROR!!!");
             }
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Error send data", e);

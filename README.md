@@ -57,7 +57,7 @@ Default it will listen on port 7854 and 127.0.0.1 if you don't set port and ip.
 This code adds a listener to handle receiving data from clients and listen for disconnected clients
 ```Java
   server.registerServerListerner(new DataReceivedListener() {
-      public void recivedMessage(Message message) {
+      public void receivedMessage(Message message) {
         byte[] data = message.getData();
         ...
       }
@@ -87,7 +87,7 @@ After this is setup you can easily send messages to the server.
 This code adds a listener to handle receiving data from the server
 ```Java
  client.registerClientListerner(new DataReceivedListener() {
-      public void recivedMessage(Message message) {
+      public void receivedMessage(Message message) {
        byte[] data = message.getData();
         ...
       }

@@ -511,15 +511,8 @@ public class Server {
 
     public synchronized void removeInactiveSplitMessages() {
         if (serverThread != null && serverThread.isAlive()) {
-            long currentTime = System.currentTimeMillis();
             for (Connection connection : clients.values()) {
-                Set<Integer> splitMessageKeySet = connection.getSplitMessageData().keySet();
-                for (Iterator<Integer> j = splitMessageKeySet.iterator(); j.hasNext();) {
-                    Integer splitId = j.next();
-                    if ((connection.getSplitMessageData().size() > 0 && connection.getSplitMessageData().get(splitId) != null && connection.getSplitMessageData().get(splitId).get(0) != null) && (connection.getSplitMessageData().get(splitId).get(0).getCreateTime() + 30000 < currentTime)) {
-                        j.remove();
-                    }
-                }
+                connection.removeSplitMessages();
             }
         }
     }
@@ -533,6 +526,7 @@ public class Server {
     public synchronized void sendData(Connection connection, byte[] data, NetworkSendType sendType) {
         byte[] sendData;
         ByteBuffer byteBufferSendData;
+        LOG.log(Level.FINEST, "DataSent: " + data.length + " SendType: " + sendType.name());
         try {
             if (data.length + byteBufferSize <= bufferSize) {
                 byteBufferSendData = ByteBuffer.allocate(byteBufferSize + data.length);
@@ -607,7 +601,7 @@ public class Server {
 
     private void recivedMessage(Message message) {
         for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
-            dataReceivedListener.recivedMessage(message);
+            dataReceivedListener.receivedMessage(message);
         }
     }
 
