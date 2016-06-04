@@ -104,6 +104,7 @@ public class Connection {
     public Connection(InetAddress address, int port) {
         this.address = address;
         this.port = port;
+        connectionId = UUID.nameUUIDFromBytes((address.toString() + port).getBytes());
     }
 
     public Connection(Connection connection) {
@@ -226,7 +227,7 @@ public class Connection {
             sendDataQueList.add(sendDataQue);
             droppedUnreliableMessages = 0;
         } else {
-            if (networkSendType == NetworkSendType.RELIABLE_GAME_DATA || networkSendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
+            if (networkSendType == NetworkSendType.RELIABLE_GAME_DATA || networkSendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA || networkSendType == NetworkSendType.PEER_DATA || networkSendType == NetworkSendType.PEER_SPLIT_DATA) {
                 sendDataQueList.add(sendDataQue);
             } else if (networkSendType == NetworkSendType.UNRELIABLE_GAME_DATA || networkSendType == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
                 long currentTime = System.currentTimeMillis();
