@@ -36,8 +36,11 @@ public class Server {
 
     private static final Logger LOG = Logger.getLogger(Server.class.getName());
 
-    // The name of the protocol version, to sort out incorrect package
-    private int protocalVersion = "Protocal 0.1".hashCode();
+    // Default protocal version name
+    private static final String protocalVersion = "Protocal 0.1";
+
+    // Hash value of the protocal, to sort out incorrect package, should be same on client
+    private int protocalVersionHash = protocalVersion.hashCode();
 
     // Max size that can be sent in one package
     private int bufferSize = 512;
@@ -87,6 +90,7 @@ public class Server {
     private DatagramPacket incoming = null;
     private NetworkPackage sendingPackage;
 
+    // If the server are running
     private boolean running = false;
 
     private ServerThread serverThread;
@@ -109,11 +113,7 @@ public class Server {
      * Create new server on port 7854 on localhost with max 8 connections
      */
     public Server() {
-        ipAdress = "127.0.0.1";
-        port = 7854;
-        byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ConcurrentHashMap<UUID, Connection>(8);
-        maxConnections = 8;
+        this(7854, "127.0.0.1", 8);
     }
 
     /**
@@ -123,11 +123,7 @@ public class Server {
      * @param maxConnections
      */
     public Server(int port, String ipAdress, int maxConnections) {
-        this.port = port;
-        this.ipAdress = ipAdress;
-        byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        clients = new ConcurrentHashMap<UUID, Connection>(maxConnections);
-        this.maxConnections = maxConnections;
+        this(port, ipAdress, maxConnections, protocalVersion);
     }
 
     /**
@@ -143,7 +139,7 @@ public class Server {
         byteBuffer = ByteBuffer.allocate(byteBufferSize);
         clients = new ConcurrentHashMap<UUID, Connection>(maxConnections);
         this.maxConnections = maxConnections;
-        protocalVersion = protocalVersionName.hashCode();
+        protocalVersionHash = protocalVersionName.hashCode();
     }
 
     /**
@@ -181,10 +177,10 @@ public class Server {
 
     /**
      * OBS! Must be same on both client and server
-     * @param protocalVersion
+     * @param protocalVersionHash
      */
-    public void setProtocalVersion(int protocalVersion) {
-        this.protocalVersion = protocalVersion;
+    public void setProtocalVersionHash(int protocalVersionHash) {
+        this.protocalVersionHash = protocalVersionHash;
     }
 
     /**
@@ -293,6 +289,7 @@ public class Server {
             running = false;
             datagramSocket.close();
             serverThread.interrupt();
+            handleConnection.interrupt();
         }
     }
 
@@ -412,10 +409,10 @@ public class Server {
                         networkPackage.resendData(networkPackage.getSequenceNumber());
                         if (networkPackage.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                             byteBufferResend = ByteBuffer.allocate(byteBufferSize + 4 + networkPackage.getDataSent().length);
-                            byteBufferResend.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).putInt(networkPackage.getSplitSequenceNumber()).put(networkPackage.getDataSent());
+                            byteBufferResend.putInt(protocalVersionHash).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).putInt(networkPackage.getSplitSequenceNumber()).put(networkPackage.getDataSent());
                         } else {
                             byteBufferResend = ByteBuffer.allocate(byteBufferSize + networkPackage.getDataSent().length);
-                            byteBufferResend.putInt(protocalVersion).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
+                            byteBufferResend.putInt(protocalVersionHash).put((byte) networkPackage.getNetworkSendType().getTypeCode()).putInt(networkPackage.getSequenceNumber()).put(networkPackage.getDataSent());
                         }
                         byte[] sendData = byteBuffer.array();
                         DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
@@ -429,7 +426,7 @@ public class Server {
     }
 
     public synchronized void sendFromQue() {
-        if (!running) {
+        if (!running || !serverThread.isAlive() || datagramSocket == null) {
             return;
         }
         for (Connection connection : clients.values()) {
@@ -531,7 +528,7 @@ public class Server {
             if (data.length + byteBufferSize <= bufferSize) {
                 byteBufferSendData = ByteBuffer.allocate(byteBufferSize + data.length);
                 sendingPackage = connection.getNetworkPackage(data, sendType);
-                byteBufferSendData.putInt(protocalVersion).put((byte) sendType.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).put(data);
+                byteBufferSendData.putInt(protocalVersionHash).put((byte) sendType.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).put(data);
                 sendData = byteBufferSendData.array();
                 DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
                 datagramSocket.send(dp);
@@ -545,7 +542,7 @@ public class Server {
                     if (data.length - len > bufferSize - byteBufferSize - splitIdSize - 4) {
                         dataToSend = Arrays.copyOfRange(data, len, bufferSize - byteBufferSize - splitIdSize - 4 + len);
                         byteBufferSendData = ByteBuffer.allocate(bufferSize - 4);
-                        byteBufferSendData.putInt(protocalVersion);
+                        byteBufferSendData.putInt(protocalVersionHash);
                         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                             byteBufferSendData.put((byte) NetworkSendType.RELIABLE_SPLIT_GAME_DATA.getTypeCode());
                             sendingPackage = connection.getNetworkPackage(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
@@ -562,7 +559,7 @@ public class Server {
                     } else {
                         dataToSend = Arrays.copyOfRange(data, len, data.length);
                         byteBufferSendData = ByteBuffer.allocate(byteBufferSize + splitIdSize + 4 + dataToSend.length);
-                        byteBufferSendData.putInt(protocalVersion);
+                        byteBufferSendData.putInt(protocalVersionHash);
                         if (sendType == NetworkSendType.RELIABLE_GAME_DATA || sendType == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
                             byteBufferSendData.put((byte) NetworkSendType.RELIABLE_SPLIT_GAME_DATA.getTypeCode());
                             sendingPackage = connection.getNetworkPackage(dataToSend, NetworkSendType.RELIABLE_SPLIT_GAME_DATA);
@@ -589,7 +586,7 @@ public class Server {
             connection.setReceivedPackageStack(sequenceNumberToAck);
             ByteBuffer byteBufferAck = ByteBuffer.allocate(byteBufferSize + 4);
             NetworkPackage sendingPackage = connection.getAckPackage();
-            byteBufferAck.putInt(protocalVersion).put((byte)NetworkSendType.ACK.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).putInt(sequenceNumberToAck);
+            byteBufferAck.putInt(protocalVersionHash).put((byte)NetworkSendType.ACK.getTypeCode()).putInt(sendingPackage.getSequenceNumber()).putInt(sequenceNumberToAck);
             byte[] sendData = byteBufferAck.array();
             DatagramPacket dp = new DatagramPacket(sendData, sendData.length, connection.getAddress(), connection.getPort());
             datagramSocket.send(dp);
@@ -642,7 +639,7 @@ public class Server {
                     byteBuffer.limit(incoming.getLength());
                     byteBuffer.put(incoming.getData(), 0, incoming.getLength());
                     byteBuffer.flip();
-                    if (byteBuffer.getInt(0) != protocalVersion) {
+                    if (byteBuffer.getInt(0) != protocalVersionHash) {
                         continue;
                     }
                     tempConnection.updateClient(incoming.getAddress(), incoming.getPort());

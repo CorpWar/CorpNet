@@ -307,7 +307,7 @@ public class Client {
     }
 
     private synchronized void sendFromQue() {
-        if (!running) {
+        if (!running || !clientThread.isAlive() || sock == null) {
             return;
         }
         if (connection.getNextSendQueData()) {
