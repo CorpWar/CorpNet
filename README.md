@@ -1,9 +1,9 @@
 ![CorpNet](http://www.corpwar.net/wp-content/uploads/2014/10/corpnet.png)
 =======
 
-[![Build Status](http://90.230.165.227:7890/buildStatus/icon?job=CorpNet)](http://90.230.165.227:7890/job/CorpNet/)
+[![Build Status](http://home.corpwar.net:7890/buildStatus/icon?job=CorpNet)](http://90.230.165.227:7890/job/CorpNet/)
 
-You can find the latest snapshot version [here](http://90.230.165.227:7890/job/CorpNet/lastBuild/net.corpwar.lib$corpnet/) 
+You can find the latest snapshot version [here](http://home.corpwar.net:7890/job/CorpNet/lastBuild/net.corpwar.lib$corpnet/) 
 
 Java R-UDP network library for client <-> server solutions.
 
@@ -12,11 +12,19 @@ This library work on both desktop and on Android.
 
 ## How to get going
 
-Head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go. Or just use the source from here to get the latest updates.
+You can ether grab it from maven central
+```
+<dependency>
+    <groupId>net.corpwar.lib</groupId>
+    <artifactId>corpnet</artifactId>
+    <version>1.7.0</version>
+</dependency>
+```
+Or you can head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go. Or just use the source from here to get the latest updates.
 
-## Changes and limitation from normal UDP
+## Changes and limitation
 
-There have been some things added to normal UDP to get it more reliable.
+There have been some things added to this library that isn't normaly in UDP to get it more reliable.
 
 - You can send reliable package and know it will be delivered to the other side.
 - You will be informed if someone get disconnected.
@@ -25,16 +33,16 @@ There have been some things added to normal UDP to get it more reliable.
 - If packages are bigger then max package size (default 512) then it will be split. If an unreliable package don't arrive the entire message will be discarded. Reliable messages will always be delivered.
 - Flow control implemented. If to much data are sent unreliable messages are dropped. And sents are slowed down if ping goes up.
  
-There are a few things that are not handled. Or should be implemented.
+There are a few things that are not handled.
 
 - Packages can come in another order then you send them, if this is a problem you have to deal with it your self.
 
 Default max package size are set to 512 bytes. After that it will be split up in smaller chunks.
-If split packages are arrived in the wrong order then the framework will handle it.
+If split packages are arrived in the wrong order then the framework will handle it and put it together in the right order.
 
 All data will be sent in byte[] format. This is to give the developer full freedom how things should be sent, and that optimization can be done. To help out with transforming between objects and byte[] there will be utility classes instead.
 
-In maven this is set to compile with java 1.6. I had problem to get it work in Android with a later version. If someone can solve this please contact me.
+In maven this is set to compile with java 1.7. I had problem to get it work in Android with a later version. If someone can solve this please contact me.
 If you add this to Android don't forget 
 ```Java
     <uses-permission android:name="android.permission.INTERNET" />
