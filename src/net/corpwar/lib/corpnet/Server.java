@@ -149,12 +149,6 @@ public class Server {
      */
     public Connection getConnectionFromUUID(UUID uuid) {
         return clients.get(uuid);
-//        for (int i = clients.size() - 1; i >= 0; i--) {
-//            if (clients.get(i).getConnectionId().equals(uuid)) {
-//                return clients.get(i);
-//            }
-//        }
-//        return null;
     }
 
     /**
@@ -653,15 +647,6 @@ public class Server {
                         sendAck(tempConnection, byteBuffer.getInt(5));
                         continue;
                     }
-
-                    //int workingClient = clients.indexOf(tempConnection);
-//                    if (clients.values().contains(tempConnection)) {
-//                        client = clients.get(tempConnection.getConnectionId());
-//                        int i = clients.indexOf(tempConnection);
-//                        if (i >= 0) {
-//                            client = clients.get(i);
-//                        }
-//                    }
                     client = clients.get(tempConnection.getConnectionId());
 
 
@@ -772,7 +757,6 @@ public class Server {
             if (tempPackage != null) {
                 long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
                 connection.getRoundTripTimes().push(roundTripTime);
-                //System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }

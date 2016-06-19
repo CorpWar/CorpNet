@@ -16,43 +16,20 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  **************************************************************************/
-package net.corpwar.lib.corpnet.chat;
-
-import net.corpwar.lib.corpnet.*;
-
-import java.util.UUID;
+package net.corpwar.lib.corpnet.masterserver;
 
 
-public class PeerStart {
+import net.corpwar.lib.corpnet.master.MasterServer;
 
-    private PeerToPeer peer;
+public class MasterServerTest {
 
-    public PeerStart() {
-        peer = new PeerToPeer(20000, "127.0.0.1", 20);
-        peer.startPeer();
-
-        peer.registerPeerListerner(new PeerReceiverListener() {
-
-
-            @Override
-            public void connected(Connection connection) {
-
-            }
-
-            @Override
-            public void receivedMessage(Message message) {
-                System.out.println("receivedMessage" + message.getConnectionID() + " : " + new String(message.getData()));
-            }
-
-            @Override
-            public void disconnected(UUID connectionId) {
-                System.out.println("disconnected: " + connectionId);
-            }
-        });
+    public MasterServerTest() {
+        MasterServer masterServer = new MasterServer();
+        masterServer.startMasterServer(false);
     }
 
     public static void main (String[] args)  {
 
-        new PeerStart();
+        new MasterServerTest();
     }
 }

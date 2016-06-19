@@ -16,43 +16,16 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  **************************************************************************/
-package net.corpwar.lib.corpnet.chat;
+package net.corpwar.lib.corpnet.master;
 
-import net.corpwar.lib.corpnet.*;
+import java.io.Serializable;
 
-import java.util.UUID;
+public class RegisterPeer implements Serializable{
 
+    public String shortName = "";
 
-public class PeerStart {
+    public String description = "";
 
-    private PeerToPeer peer;
-
-    public PeerStart() {
-        peer = new PeerToPeer(20000, "127.0.0.1", 20);
-        peer.startPeer();
-
-        peer.registerPeerListerner(new PeerReceiverListener() {
-
-
-            @Override
-            public void connected(Connection connection) {
-
-            }
-
-            @Override
-            public void receivedMessage(Message message) {
-                System.out.println("receivedMessage" + message.getConnectionID() + " : " + new String(message.getData()));
-            }
-
-            @Override
-            public void disconnected(UUID connectionId) {
-                System.out.println("disconnected: " + connectionId);
-            }
-        });
-    }
-
-    public static void main (String[] args)  {
-
-        new PeerStart();
-    }
 }
+
+

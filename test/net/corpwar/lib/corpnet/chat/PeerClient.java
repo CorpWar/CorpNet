@@ -18,9 +18,7 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet.chat;
 
-import net.corpwar.lib.corpnet.DataReceivedListener;
-import net.corpwar.lib.corpnet.Message;
-import net.corpwar.lib.corpnet.PeerToPeer;
+import net.corpwar.lib.corpnet.*;
 
 import java.util.Random;
 import java.util.UUID;
@@ -36,7 +34,13 @@ public class PeerClient {
         peer.startPeer();
         peer.connectToPeer(20000, "127.0.0.1");
 
-        peer.registerClientListerner(new DataReceivedListener() {
+        peer.registerPeerListerner(new PeerReceiverListener() {
+
+            @Override
+            public void connected(Connection connection) {
+                System.out.println(connection.getAddress().getHostAddress() + ":" + connection.getPort());
+            }
+
             @Override
             public void receivedMessage(Message message) {
                 System.out.println("receivedMessage " + message.getConnectionID() + " : " + new String(message.getData()));

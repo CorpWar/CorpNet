@@ -99,7 +99,7 @@ public class PeerToPeer {
     private Connection tempConnection = new Connection();
     private PeerToPeer.HandleConnection handleConnection = new PeerToPeer.HandleConnection();
 
-    private final List<DataReceivedListener> dataReceivedListeners = new ArrayList<DataReceivedListener>();
+    private final List<PeerReceiverListener> peerReceiverListeners = new ArrayList<>();
     private final Message message = new Message();
 
     // If we want to simulate delay when we try internaly
@@ -436,24 +436,24 @@ public class PeerToPeer {
                 }
             }
         } else {
-            for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
-                dataReceivedListener.receivedMessage(message);
+            for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
+                peerReceiverListener.receivedMessage(message);
             }
         }
     }
 
     private void disconnectedClients(UUID clientId) {
-        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
-            dataReceivedListener.disconnected(clientId);
+        for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
+            peerReceiverListener.disconnected(clientId);
         }
     }
 
     /**
-     * Register client listener
-     * @param dataReceivedListener
+     * Register peer listener
+     * @param peerReceiverListener
      */
-    public void registerClientListerner(DataReceivedListener dataReceivedListener) {
-        dataReceivedListeners.add(dataReceivedListener);
+    public void registerPeerListerner(PeerReceiverListener peerReceiverListener) {
+        peerReceiverListeners.add(peerReceiverListener);
     }
 
     /**
@@ -565,13 +565,16 @@ public class PeerToPeer {
                         }
 
                         // check if we have reached max connections
-                    } else if (peer == null && peers.size() < maxConnections) {
+                    } else if (peers.size() < maxConnections) {
                         Connection newConnection = new Connection(tempConnection);
                         if (keepAlive) {
                             newConnection.setNextKeepAlive(System.currentTimeMillis() + (long)(millisecondToTimeout * 0.2f));
                         }
                         sendPeerList(newConnection);
                         peers.put(newConnection.getConnectionId(), newConnection);
+                        for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
+                            peerReceiverListener.connected(newConnection);
+                        }
                         peer = newConnection;
 
                     }
@@ -582,9 +585,7 @@ public class PeerToPeer {
                         // Verify that we have received ack otherwise ignore
                         if (byteBuffer.get(4) == NetworkSendType.ACK.getTypeCode()) {
                             if (incoming.getLength() == 13) {
-                                if (peer != null) {
-                                    verifyAck(peer, byteBuffer.getInt(9)); //ByteBuffer.wrap(data, 9, 13).getInt());
-                                }
+                                verifyAck(peer, byteBuffer.getInt(9)); //ByteBuffer.wrap(data, 9, 13).getInt());
                             }
                             continue;
                         }
