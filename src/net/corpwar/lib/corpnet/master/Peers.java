@@ -22,11 +22,11 @@ import java.io.Serializable;
 import java.util.List;
 
 
-public class PeerList implements Serializable {
+public class Peers implements Serializable {
 
     public List<Peer> peers;
 
-    public PeerList(List<Peer> peers) {
+    public Peers(List<Peer> peers) {
         this.peers = peers;
     }
 }

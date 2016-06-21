@@ -701,7 +701,9 @@ public class Server {
 
                         message.setNetworkSendType(NetworkSendType.fromByteValue(byteBuffer.get(4)));
 
-                        if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA || message.getNetworkSendType() == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA) {
+                        if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA ||
+                                message.getNetworkSendType() == NetworkSendType.UNRELIABLE_SPLIT_GAME_DATA ||
+                                message.getNetworkSendType() == NetworkSendType.PEER_SPLIT_DATA) {
                             byte[] tempDataBuffer = new byte[byteBuffer.limit() - 13];
                             message.setSequenceId(byteBuffer.getInt(5));
                             message.setSplitMessageId(byteBuffer.getInt(9)); // new BigInteger(Arrays.copyOfRange(data, byteBufferSize, byteBufferSize + 4)).intValue());
@@ -710,7 +712,7 @@ public class Server {
                             byteBuffer.get(tempDataBuffer, 0, tempDataBuffer.length);
                             message.setData(tempDataBuffer);
 
-                            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
+                            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA || message.getNetworkSendType() == NetworkSendType.PEER_SPLIT_DATA) {
                                 sendAck(tempConnection, byteBuffer.getInt(5));
                             }
 
@@ -724,7 +726,7 @@ public class Server {
                             message.setSequenceId(byteBuffer.getInt(5));
                             message.setConnectionID(client.getConnectionId());
 
-                            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA) {
+                            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA || message.getNetworkSendType() == NetworkSendType.PEER_DATA) {
                                 sendAck(tempConnection, byteBuffer.getInt(5));
                             }
 
@@ -745,9 +747,6 @@ public class Server {
             if (data.length > 0) {
                 message.setData(data);
                 recivedMessage(message);
-            }
-            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_SPLIT_GAME_DATA) {
-                sendAck(connection, message.getSequenceId());
             }
             connection.updateTime();
         }

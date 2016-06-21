@@ -18,6 +18,7 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet;
 
+import net.corpwar.lib.corpnet.master.*;
 import net.corpwar.lib.corpnet.util.PeerConnected;
 import net.corpwar.lib.corpnet.util.PeerList;
 import net.corpwar.lib.corpnet.util.SendDataQue;
@@ -108,8 +109,11 @@ public class PeerToPeer {
     // How much delay should we simulate
     private long simulateDelayTimeMin = 100, simulateDelayTimeMax = 500, simulatedDelay = 0;
 
-    private PeerList peerList = new PeerList();
 
+    // Handle if connecting to a master server to handle hole punching
+    private Connection masterServer;
+    private Peers masterServerPeerList = null;
+    private PeerList peerList = new PeerList();
 
     public PeerToPeer() {
         if (randomPeerPort) {
@@ -154,6 +158,47 @@ public class PeerToPeer {
             e.printStackTrace();
         }
     }
+
+    public void connectToMasterServer(String ipNumber, int port) {
+        try {
+            masterServer = new Connection(InetAddress.getByName(ipNumber), port);
+            masterServer.updateTime();
+            masterServer.addToSendQue(SerializationUtils.getInstance().serialize("Knock knock"), NetworkSendType.PEER_DATA);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void registerToMasterServer() {
+        masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RegisterPeer()), NetworkSendType.PEER_DATA);
+    }
+
+    public void requestPeerList() {
+        masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RetrivePeerList()), NetworkSendType.PEER_DATA);
+    }
+
+    public void connectToPeerViaMasterServer(UUID peerToConnect) {
+        masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new ConnectToPeer(peerToConnect)), NetworkSendType.PEER_DATA);
+    }
+
+    public Peers retrieveMasterServerList() {
+        requestPeerList();
+        masterServerPeerList = null;
+        int i = 0;
+        while (i < 15) {
+            if (masterServerPeerList != null) {
+                break;
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            i++;
+        }
+        return masterServerPeerList;
+    }
+
 
     /**
      * Kill the server if it's running
@@ -323,6 +368,18 @@ public class PeerToPeer {
                 connection.setLastSentMessageTime(System.currentTimeMillis());
             }
         }
+        if (masterServer != null) {
+            if (masterServer.getNextSendQueData()) {
+                Iterator<SendDataQue> iter = masterServer.getSendDataQueList().iterator();
+                while (iter.hasNext()) {
+                    SendDataQue sendDataQue = iter.next();
+                    sendData(masterServer, sendDataQue.getaByte(), sendDataQue.getNetworkSendType());
+                    masterServer.getSendDataQuePool().giveBack(sendDataQue);
+                    iter.remove();
+                }
+                masterServer.setLastSentMessageTime(System.currentTimeMillis());
+            }
+        }
     }
 
     /**
@@ -415,30 +472,15 @@ public class PeerToPeer {
 
     private void receivedMessage(Message message) {
         if (message.getNetworkSendType() == NetworkSendType.PEER_DATA || message.getNetworkSendType() == NetworkSendType.PEER_SPLIT_DATA) {
-            if (SerializationUtils.getInstance().deserialize(message.getData()) instanceof String) {
-                return;
+            Object data = SerializationUtils.getInstance().deserialize(message.getData());
+            if (data instanceof Peers) {
+                masterServerPeerList = (Peers)data;
+            } else if (data instanceof ConnectToPeer) {
+                connectToPeer(((ConnectToPeer) data).externalPort, ((ConnectToPeer) data).externalIp);
             }
-            PeerList peerList = SerializationUtils.getInstance().deserialize(message.getData());
-            for (PeerConnected peerConnected : peerList.peerConnected) {
-                if ((peerConnected.peerPort == datagramSocket.getPort() || peerConnected.peerPort == datagramSocket.getLocalPort()) &&
-                        ((datagramSocket.getInetAddress() != null && peerConnected.ipToPeer.equalsIgnoreCase(datagramSocket.getInetAddress().getHostAddress())) || (datagramSocket.getLocalAddress() != null && peerConnected.ipToPeer.equalsIgnoreCase(datagramSocket.getLocalAddress().getHostAddress())))) {
-                    continue;
-                }
-                try {
-                    tempConnection.updateClient(InetAddress.getByName(peerConnected.ipToPeer), peerConnected.peerPort);
-                    if (!peers.containsKey(tempConnection.getConnectionId())) {
-                        Connection newConnection = new Connection(tempConnection);
-                        peers.put(newConnection.getConnectionId(), newConnection);
-                        newConnection.addToSendQue(SerializationUtils.getInstance().serialize("Knock knock"), NetworkSendType.PEER_DATA);
-                    }
-                } catch (UnknownHostException e) {
-                    LOG.log(Level.SEVERE, "Peer data error", e);
-                }
-            }
-        } else {
-            for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
-                peerReceiverListener.receivedMessage(message);
-            }
+        }
+        for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
+            peerReceiverListener.receivedMessage(message);
         }
     }
 
@@ -454,6 +496,10 @@ public class PeerToPeer {
      */
     public void registerPeerListerner(PeerReceiverListener peerReceiverListener) {
         peerReceiverListeners.add(peerReceiverListener);
+    }
+
+    public Map<UUID, Connection> getPeers() {
+        return peers;
     }
 
     /**
@@ -565,15 +611,17 @@ public class PeerToPeer {
                         }
 
                         // check if we have reached max connections
-                    } else if (peers.size() < maxConnections) {
+                    } else if (peers.size() < maxConnections ) {
                         Connection newConnection = new Connection(tempConnection);
                         if (keepAlive) {
                             newConnection.setNextKeepAlive(System.currentTimeMillis() + (long)(millisecondToTimeout * 0.2f));
                         }
-                        sendPeerList(newConnection);
-                        peers.put(newConnection.getConnectionId(), newConnection);
-                        for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
-                            peerReceiverListener.connected(newConnection);
+                        if (!masterServer.equals(tempConnection)) {
+                            sendPeerList(newConnection);
+                            peers.put(newConnection.getConnectionId(), newConnection);
+                            for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
+                                peerReceiverListener.connected(newConnection);
+                            }
                         }
                         peer = newConnection;
 
@@ -647,7 +695,6 @@ public class PeerToPeer {
             if (tempPackage != null) {
                 long roundTripTime = System.currentTimeMillis() - tempPackage.getSentTime();
                 connection.getRoundTripTimes().push(roundTripTime);
-                //System.out.println("smoothTime: " + connection.getSmoothRoundTripTime());
                 if (tempPackage.getNetworkSendType() == NetworkSendType.PING) {
                     connection.setLastPingTime(roundTripTime);
                 }

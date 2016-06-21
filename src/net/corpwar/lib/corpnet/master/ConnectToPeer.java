@@ -23,5 +23,24 @@ import java.util.UUID;
 
 public class ConnectToPeer implements Serializable {
 
+    public ConnectToPeer() {
+    }
+
+    public ConnectToPeer(UUID connectionID) {
+        this.connectionID = connectionID;
+    }
+
+    public ConnectToPeer(int externalPort, String externalIp) {
+        this.externalPort = externalPort;
+        this.externalIp = externalIp;
+    }
+
+    // External port to peer
+    public int externalPort;
+
+    // External ip to peer
+    public String externalIp;
+
+    // UUID that should be connected to
     public UUID connectionID;
 }
