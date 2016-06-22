@@ -20,5 +20,5 @@ package net.corpwar.lib.corpnet.master;
 
 import java.io.Serializable;
 
-public class RetrivePeerList implements Serializable {
+public class RetrievePeerList implements Serializable {
 }

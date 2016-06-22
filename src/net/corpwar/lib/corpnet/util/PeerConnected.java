@@ -22,12 +22,15 @@ import java.io.Serializable;
 
 public class PeerConnected implements Serializable{
 
-    public PeerConnected(String ipToPeer, int peerPort) {
+    public PeerConnected(String ipToPeer, int peerPort, long pingTime) {
         this.peerPort = peerPort;
         this.ipToPeer = ipToPeer;
+        this.pingTime = pingTime;
     }
 
     public int peerPort;
 
     public String ipToPeer;
+
+    public long pingTime;
 }

@@ -19,7 +19,13 @@
 package net.corpwar.lib.corpnet.chat;
 
 import net.corpwar.lib.corpnet.*;
+import net.corpwar.lib.corpnet.master.RetrievePeerList;
+import net.corpwar.lib.corpnet.util.PeerConnected;
+import net.corpwar.lib.corpnet.util.PeerList;
+import net.corpwar.lib.corpnet.util.SerializationUtils;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.UUID;
 
@@ -33,6 +39,13 @@ public class PeerClient {
         peer = new PeerToPeer();
         peer.startPeer();
         peer.connectToPeer(20000, "127.0.0.1");
+        try {
+            Connection connection = new Connection(InetAddress.getByName("127.0.0.1"), 20000);
+            connection = peer.getPeers().get(connection.getConnectionId());
+            connection.addToSendQue(SerializationUtils.getInstance().serialize(new RetrievePeerList()), NetworkSendType.PEER_DATA);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
 
         peer.registerPeerListerner(new PeerReceiverListener() {
 
@@ -44,6 +57,15 @@ public class PeerClient {
             @Override
             public void receivedMessage(Message message) {
                 System.out.println("receivedMessage " + message.getConnectionID() + " : " + new String(message.getData()));
+                if (message.getNetworkSendType() == NetworkSendType.PEER_DATA) {
+                    Object object = SerializationUtils.getInstance().deserialize(message.getData());
+                    if (object instanceof PeerList) {
+                        PeerList peerList = (PeerList) object;
+                        for (PeerConnected peerConnected : peerList.peerConnected) {
+                            System.out.println(peerConnected.ipToPeer + ":" + peerConnected.peerPort + ":" + peerConnected.pingTime);
+                        }
+                    }
+                }
             }
 
             @Override

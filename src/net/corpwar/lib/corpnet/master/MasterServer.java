@@ -75,16 +75,14 @@ public class MasterServer implements DataReceivedListener {
     public void receivedMessage(Message message) {
         if (message.getNetworkSendType().equals(NetworkSendType.PEER_DATA)) {
             if (SerializationUtils.getInstance().deserialize(message.getData()) instanceof RegisterPeer) {
-                System.out.println("Register");
                 RegisterPeer registerPeer = SerializationUtils.getInstance().deserialize(message.getData());
                 Connection connection = masterServer.getConnectionFromUUID(message.getConnectionID());
                 Peer peer = new Peer(connection.getPort(), connection.getAddress().getHostAddress(), connection.getLastPingTime(), registerPeer.shortName, registerPeer.description, message.getConnectionID());
                 peers.add(peer);
-            } else if (SerializationUtils.getInstance().deserialize(message.getData()) instanceof RetrivePeerList) {
+            } else if (SerializationUtils.getInstance().deserialize(message.getData()) instanceof RetrievePeerList) {
                 Connection connection = masterServer.getConnectionFromUUID(message.getConnectionID());
                 connection.addToSendQue(SerializationUtils.getInstance().serialize(new Peers(peers)), NetworkSendType.PEER_DATA);
             } else if (SerializationUtils.getInstance().deserialize(message.getData()) instanceof ConnectToPeer) {
-                System.out.println("connect");
                 ConnectToPeer connectToPeer = SerializationUtils.getInstance().deserialize(message.getData());
                 Connection connection = masterServer.getConnectionFromUUID(connectToPeer.connectionID);
                 Connection askingPeer = masterServer.getConnectionFromUUID(message.getConnectionID());

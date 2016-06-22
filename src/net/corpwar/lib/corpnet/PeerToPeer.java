@@ -170,31 +170,39 @@ public class PeerToPeer {
     }
 
     public void registerToMasterServer() {
-        masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RegisterPeer()), NetworkSendType.PEER_DATA);
+        if (masterServer != null) {
+            masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RegisterPeer()), NetworkSendType.PEER_DATA);
+        }
     }
 
     public void requestPeerList() {
-        masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RetrivePeerList()), NetworkSendType.PEER_DATA);
+        if (masterServer != null) {
+            masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RetrievePeerList()), NetworkSendType.PEER_DATA);
+        }
     }
 
     public void connectToPeerViaMasterServer(UUID peerToConnect) {
-        masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new ConnectToPeer(peerToConnect)), NetworkSendType.PEER_DATA);
+        if (masterServer != null) {
+            masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new ConnectToPeer(peerToConnect)), NetworkSendType.PEER_DATA);
+        }
     }
 
     public Peers retrieveMasterServerList() {
-        requestPeerList();
-        masterServerPeerList = null;
-        int i = 0;
-        while (i < 15) {
-            if (masterServerPeerList != null) {
-                break;
+        if (masterServer != null) {
+            requestPeerList();
+            masterServerPeerList = null;
+            int i = 0;
+            while (i < 15) {
+                if (masterServerPeerList != null) {
+                    break;
+                }
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                i++;
             }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            i++;
         }
         return masterServerPeerList;
     }
@@ -477,6 +485,8 @@ public class PeerToPeer {
                 masterServerPeerList = (Peers)data;
             } else if (data instanceof ConnectToPeer) {
                 connectToPeer(((ConnectToPeer) data).externalPort, ((ConnectToPeer) data).externalIp);
+            } else if (data instanceof RetrievePeerList) {
+                sendPeerList(peers.get(message.getConnectionID()));
             }
         }
         for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
@@ -545,7 +555,7 @@ public class PeerToPeer {
     private synchronized void sendPeerList(Connection connectingPeer) {
         peerList.peerConnected.clear();
         for (Connection connection : peers.values()) {
-            peerList.peerConnected.add(new PeerConnected(connection.getAddress().getHostAddress(), connection.getPort()));
+            peerList.peerConnected.add(new PeerConnected(connection.getAddress().getHostAddress(), connection.getPort(), connection.getSmoothRoundTripTime()));
         }
         if (peerList.peerConnected.size() > 0) {
             connectingPeer.addToSendQue(SerializationUtils.getInstance().serialize(peerList), NetworkSendType.PEER_DATA);
@@ -561,7 +571,7 @@ public class PeerToPeer {
         @Override
         public void run() {
 
-            Connection peer = null;
+            Connection peer;
             try {
                 if (ipAddress == null) {
                     datagramSocket = new DatagramSocket(port);
@@ -578,7 +588,6 @@ public class PeerToPeer {
 
             while(running) {
                 try {
-                    peer = null;
                     datagramSocket.receive(incoming);
                     LOG.log(Level.FINEST, "incoming: " + incoming.getPort() + " type: " + NetworkSendType.fromByteValue(byteBuffer.get(4)));
                     byteBuffer.clear();
@@ -616,8 +625,7 @@ public class PeerToPeer {
                         if (keepAlive) {
                             newConnection.setNextKeepAlive(System.currentTimeMillis() + (long)(millisecondToTimeout * 0.2f));
                         }
-                        if (!masterServer.equals(tempConnection)) {
-                            sendPeerList(newConnection);
+                        if (masterServer == null || (masterServer != null && !masterServer.equals(tempConnection))) {
                             peers.put(newConnection.getConnectionId(), newConnection);
                             for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {
                                 peerReceiverListener.connected(newConnection);
@@ -626,7 +634,6 @@ public class PeerToPeer {
                         peer = newConnection;
 
                     }
-
 
                     if (peer != null) {
 
