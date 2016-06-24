@@ -5,14 +5,17 @@
 
 You can find the latest snapshot version [here](http://home.corpwar.net:7890/job/CorpNet/lastBuild/net.corpwar.lib$corpnet/) 
 
-Java R-UDP network library for client <-> server solutions and Peer-to-Peer connections.
-
 If you want a fast UDP network library for your multiplayer game or application that support both reliable and unreliable packages, then this is the library for you.
 This library work on both desktop and on Android.
 
+Java R-UDP network library with three different types
+- Client <-> Server 
+- PeerToPeer
+- PeerToPeer with establishing connection via a master server
+
 ## How to get going
 
-I have added a wiki page that describe how to get going and how to use this library, so just go to wiki for this library to read more. If there are something that is hard to understand just add an issue and I take a look at it.
+I have added a [wiki page](https://github.com/CorpWar/CorpNet/wiki) that describe how to get going and how to use this library, so head over to the wiki to get started. If there are something that is hard to understand just add an issue and I take a look at it.
 
 You can ether grab it from maven central
 ```
@@ -22,7 +25,7 @@ You can ether grab it from maven central
     <version>1.7.0</version>
 </dependency>
 ```
-Or you can head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go. Or just use the source from here to get the latest updates.
+Or you can head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go.
 
 ## Why use UDP instead of TCP
 
