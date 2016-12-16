@@ -41,7 +41,7 @@ public class PeerStart {
 
             @Override
             public void receivedMessage(Message message) {
-                System.out.println("receivedMessage" + message.getConnectionID() + " : " + new String(message.getData()));
+                System.out.println("receivedMessage " + message.getConnectionID() + " : " + new String(message.getData()));
             }
 
             @Override

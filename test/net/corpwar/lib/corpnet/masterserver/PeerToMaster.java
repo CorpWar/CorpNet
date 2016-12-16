@@ -33,6 +33,7 @@ public class PeerToMaster implements PeerReceiverListener {
         peerToMaster.connectToMasterServer("127.0.0.1", 44444);
         peerToMaster.registerToMasterServer();
         peerToMaster.registerPeerListerner(this);
+        System.out.println("PeerToMaster started!");
         while(true) {
             if (peerToMaster.getPeers().size() > 0) {
                 peerToMaster.sendReliableObjectToAllClients("testing222222");
@@ -52,12 +53,12 @@ public class PeerToMaster implements PeerReceiverListener {
 
     @Override
     public void receivedMessage(Message message) {
-
+        System.out.println("UUID: " + message.getConnectionID() + " " + new String(message.getData()));
     }
 
     @Override
     public void disconnected(UUID connectionId) {
-        System.out.println("disconnected");
+        System.out.println("disconnected: " + connectionId);
     }
 
     public static void main (String[] args)  {

@@ -25,7 +25,8 @@ public class MasterServerTest {
 
     public MasterServerTest() {
         MasterServer masterServer = new MasterServer();
-        masterServer.startMasterServer(false);
+        masterServer.startMasterServer(true);
+        System.out.println("Server started");
     }
 
     public static void main (String[] args)  {

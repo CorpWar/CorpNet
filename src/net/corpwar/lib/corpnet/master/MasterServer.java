@@ -43,10 +43,12 @@ public class MasterServer implements DataReceivedListener {
     private int maxConnections;
 
     // Secondary server to try for symmetric NAT
-    private Server secondServer;
+    private PeerToPeer peerNatTestServer;
 
     // All the peers that can be connected to
     private List<Peer> peers = new ArrayList<>();
+
+    private Boolean testSymmetricNat = false;
 
 
     public MasterServer() {
@@ -65,8 +67,11 @@ public class MasterServer implements DataReceivedListener {
         masterServer = new Server(port, ipAddress, maxConnections);
         masterServer.registerServerListerner(this);
         masterServer.startServer();
-        if (testSymmetricNat) {
-            secondServer = new Server(port + 1, ipAddress, maxConnections);
+        this.testSymmetricNat = testSymmetricNat;
+        if (this.testSymmetricNat) {
+            peerNatTestServer = new PeerToPeer(port + 1, ipAddress, maxConnections);
+            peerNatTestServer.registerPeerListerner(new NATTestServer());
+            peerNatTestServer.startPeer();
         }
     }
 
@@ -87,6 +92,13 @@ public class MasterServer implements DataReceivedListener {
                 Connection connection = masterServer.getConnectionFromUUID(connectToPeer.connectionID);
                 Connection askingPeer = masterServer.getConnectionFromUUID(message.getConnectionID());
                 connection.addToSendQue(SerializationUtils.getInstance().serialize(new ConnectToPeer(askingPeer.getPort(), askingPeer.getAddress().getHostAddress())), NetworkSendType.PEER_DATA);
+            } else if (SerializationUtils.getInstance().deserialize(message.getData()) instanceof TestNat) {
+                if (testSymmetricNat) {
+                    Connection askingPeer = masterServer.getConnectionFromUUID(message.getConnectionID());
+                    peerNatTestServer.connectToPeer(askingPeer.getPort(), askingPeer.getAddress().getHostAddress());
+                } else {
+                    masterServer.getConnectionFromUUID(message.getConnectionID()).addToSendQue(SerializationUtils.getInstance().serialize("No test nat server up"), NetworkSendType.PEER_DATA);
+                }
             }
         }
     }
@@ -98,6 +110,24 @@ public class MasterServer implements DataReceivedListener {
                 peers.remove(peer);
                 break;
             }
+        }
+    }
+
+    class NATTestServer implements PeerReceiverListener {
+
+        @Override
+        public void connected(Connection connection) {
+
+        }
+
+        @Override
+        public void receivedMessage(Message message) {
+            System.out.println("NATTestServer receivedMessage: " + new String(message.getData()));
+        }
+
+        @Override
+        public void disconnected(UUID connectionId) {
+
         }
     }
 }

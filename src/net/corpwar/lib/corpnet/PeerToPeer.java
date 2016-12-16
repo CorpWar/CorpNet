@@ -153,7 +153,7 @@ public class PeerToPeer {
             Connection connection = new Connection(InetAddress.getByName(ipAddress), port);
             connection.updateTime();
             peers.put(connection.getConnectionId(), connection);
-            connection.addToSendQue(SerializationUtils.getInstance().serialize("Knock knock"), NetworkSendType.PEER_DATA);
+            connection.addToSendQue(SerializationUtils.getInstance().serialize("Knock knock peer"), NetworkSendType.PEER_DATA);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -163,7 +163,7 @@ public class PeerToPeer {
         try {
             masterServer = new Connection(InetAddress.getByName(ipNumber), port);
             masterServer.updateTime();
-            masterServer.addToSendQue(SerializationUtils.getInstance().serialize("Knock knock"), NetworkSendType.PEER_DATA);
+            masterServer.addToSendQue(SerializationUtils.getInstance().serialize("Knock knock master server"), NetworkSendType.PEER_DATA);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -172,6 +172,12 @@ public class PeerToPeer {
     public void registerToMasterServer() {
         if (masterServer != null) {
             masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new RegisterPeer()), NetworkSendType.PEER_DATA);
+        }
+    }
+
+    public void testNatViaMasterServer() {
+        if (masterServer != null) {
+            masterServer.addToSendQue(SerializationUtils.getInstance().serialize(new TestNat()), NetworkSendType.PEER_DATA);
         }
     }
 
@@ -487,6 +493,10 @@ public class PeerToPeer {
                 connectToPeer(((ConnectToPeer) data).externalPort, ((ConnectToPeer) data).externalIp);
             } else if (data instanceof RetrievePeerList) {
                 sendPeerList(peers.get(message.getConnectionID()));
+            } else if (data instanceof TestNat) {
+                if (((TestNat)data).getWorkingNat()) {
+                    peers.get(message.getConnectionID()).addToSendQue(SerializationUtils.getInstance().serialize(new TestMessage()), NetworkSendType.PEER_DATA);
+                }
             }
         }
         for (PeerReceiverListener peerReceiverListener : peerReceiverListeners) {

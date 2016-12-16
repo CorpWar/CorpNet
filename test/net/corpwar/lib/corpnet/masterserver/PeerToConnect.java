@@ -47,6 +47,16 @@ public class PeerToConnect implements PeerReceiverListener {
         Peer peer = peers.peers.get(number);
         peerToMaster.connectToPeer(peer.externalPort, peer.externalIp);
         peerToMaster.connectToPeerViaMasterServer(peer.connectionID);
+        while(true) {
+            if (peerToMaster.getPeers().size() > 0) {
+                peerToMaster.sendReliableObjectToAllClients("testing4444");
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
