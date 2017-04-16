@@ -75,6 +75,14 @@ public class MasterServer implements DataReceivedListener {
         }
     }
 
+    public Server getMasterServer() {
+        return masterServer;
+    }
+
+    @Override
+    public void connected(Connection connection) {
+
+    }
 
     @Override
     public void receivedMessage(Message message) {

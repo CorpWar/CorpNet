@@ -18,10 +18,7 @@
  **************************************************************************/
 package net.corpwar.lib.corpnet.chat;
 
-import net.corpwar.lib.corpnet.DataReceivedListener;
-import net.corpwar.lib.corpnet.Message;
-import net.corpwar.lib.corpnet.NetworkSendType;
-import net.corpwar.lib.corpnet.Server;
+import net.corpwar.lib.corpnet.*;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
 
 import javax.swing.*;
@@ -44,6 +41,11 @@ public class ChatServer {
         server.startServer();
 
         server.registerServerListerner(new DataReceivedListener() {
+            @Override
+            public void connected(Connection connection) {
+
+            }
+
             @Override
             public void receivedMessage(Message message) {
                 Object obj = SerializationUtils.getInstance().deserialize(message.getData());

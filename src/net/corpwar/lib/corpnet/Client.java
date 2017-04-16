@@ -167,6 +167,9 @@ public class Client {
         if (connection == null) {
             try {
                 connection = new Connection(InetAddress.getByName(defaultHostAddress), defaultPort);
+                for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
+                    dataReceivedListener.connected(connection);
+                }
             } catch (UnknownHostException e) {
                 LOG.log(Level.SEVERE, "Error connect to server", e);
             }
@@ -176,6 +179,7 @@ public class Client {
         clientThread = new ClientThread();
         clientThread.start();
         handleConnection.start();
+        connection.addToSendQue(new byte[0], NetworkSendType.INITSIGNAL);
     }
 
     /**

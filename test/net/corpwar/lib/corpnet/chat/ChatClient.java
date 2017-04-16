@@ -19,6 +19,7 @@
 package net.corpwar.lib.corpnet.chat;
 
 import net.corpwar.lib.corpnet.Client;
+import net.corpwar.lib.corpnet.Connection;
 import net.corpwar.lib.corpnet.DataReceivedListener;
 import net.corpwar.lib.corpnet.Message;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
@@ -49,6 +50,11 @@ public class ChatClient {
         client.startClient();
 
         client.registerClientListerner(new DataReceivedListener() {
+            @Override
+            public void connected(Connection connection) {
+
+            }
+
             @Override
             public void receivedMessage(Message message) {
                 Object obj = SerializationUtils.getInstance().deserialize(message.getData());
@@ -81,7 +87,7 @@ public class ChatClient {
         });
         chatFrame.setVisible(true);
 
-        Classes.RegisterNick nick = new Classes.RegisterNick();
+        /*Classes.RegisterNick nick = new Classes.RegisterNick();
         Random rand = new Random();
         nick.nickname = "test-" + rand.nextInt(10000);
         client.sendReliableDataObject(nick);
@@ -113,6 +119,7 @@ public class ChatClient {
             }
         };
         worker.execute();
+        */
     }
 
     static private class ChatFrame extends JFrame {

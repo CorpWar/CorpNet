@@ -32,6 +32,9 @@ public enum NetworkSendType {
     // Send an integer where in the que the client are
     QUENUMBER(1),
 
+    // Send an init signal to establish an connection
+    INITSIGNAL(2),
+
     // Send reliable game data between server and client
     RELIABLE_GAME_DATA(20),
 
@@ -69,6 +72,8 @@ public enum NetworkSendType {
                 return ACK;
             case 1:
                 return QUENUMBER;
+            case 2:
+                return INITSIGNAL;
             case 20:
                 return RELIABLE_GAME_DATA;
             case 21:

@@ -22,6 +22,8 @@ import java.util.UUID;
 
 public interface DataReceivedListener {
 
+    void connected(Connection connection);
+
     void receivedMessage(Message message);
 
     void disconnected(UUID connectionId);

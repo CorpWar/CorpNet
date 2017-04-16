@@ -2,7 +2,6 @@ package net.corpwar.lib.corpnet.masterserver;
 
 import net.corpwar.lib.corpnet.*;
 import net.corpwar.lib.corpnet.master.TestMessage;
-import net.corpwar.lib.corpnet.master.TestNat;
 import net.corpwar.lib.corpnet.util.SerializationUtils;
 
 import java.util.UUID;

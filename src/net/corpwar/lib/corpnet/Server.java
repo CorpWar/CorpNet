@@ -664,6 +664,9 @@ public class Server {
                             newConnection.setNextKeepAlive(System.currentTimeMillis() + (long)(milisecoundToTimeout * 0.2f));
                         }
                         clients.put(newConnection.getConnectionId(), newConnection);
+                        for (DataReceivedListener dataReceivedListener : dataReceivedListeners) {
+                            dataReceivedListener.connected(newConnection);
+                        }
                         client = newConnection;
 
                     // Check if we have que system enabled and if we have reached max in the que
@@ -726,11 +729,15 @@ public class Server {
                             message.setSequenceId(byteBuffer.getInt(5));
                             message.setConnectionID(client.getConnectionId());
 
-                            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA || message.getNetworkSendType() == NetworkSendType.PEER_DATA) {
+                            if (message.getNetworkSendType() == NetworkSendType.RELIABLE_GAME_DATA
+                                    || message.getNetworkSendType() == NetworkSendType.PEER_DATA
+                                    || message.getNetworkSendType() == NetworkSendType.INITSIGNAL ) {
                                 sendAck(tempConnection, byteBuffer.getInt(5));
                             }
 
-                            recivedMessage(message);
+                            if (message.getNetworkSendType() != NetworkSendType.INITSIGNAL) {
+                                recivedMessage(message);
+                            }
                         }
                         client.updateTime();
                     }
