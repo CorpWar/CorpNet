@@ -1,7 +1,7 @@
 ![CorpNet](http://www.corpwar.net/wp-content/uploads/2014/10/corpnet.png)
 =======
 
-[![Build Status](http://home.corpwar.net:7890/buildStatus/icon?job=CorpNet)](http://home.corpwar.net:7890/job/CorpNet/)
+[![Build Status](http://home.corpwar.net:7890/buildStatus/icon?job=CorpNet)](http://home.corpwar.net:7890/job/CorpNet/) [![Chat on Gitter](http://www.corpwar.net/wp-content/uploads/2017/03/gitter.png)](https://gitter.im/CorpWarNet/CorpNet)
 
 You can find the latest snapshot version [here](http://home.corpwar.net:7890/job/CorpNet/lastBuild/net.corpwar.lib$corpnet/) 
 
