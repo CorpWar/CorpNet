@@ -315,7 +315,9 @@ public class Server {
      * @param clientID
      */
     public void sendUnreliableToClient(byte[] dataToSend, UUID clientID) {
-        clients.get(clientID).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+        if (clients.containsKey(clientID)) {
+            clients.get(clientID).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+        }
     }
 
     /**
@@ -363,7 +365,9 @@ public class Server {
     }
 
     public void sendReliableToClient(byte[] sendObject, UUID clientID) {
-        clients.get(clientID).addToSendQue(sendObject, NetworkSendType.RELIABLE_GAME_DATA);
+        if (clients.containsKey(clientID)) {
+            clients.get(clientID).addToSendQue(sendObject, NetworkSendType.RELIABLE_GAME_DATA);
+        }
     }
 
     /**

@@ -362,6 +362,7 @@ public class Client {
             running = false;
             sock.close();
             clientThread.interrupt();
+            handleConnection.interrupt();
         }
     }
 
