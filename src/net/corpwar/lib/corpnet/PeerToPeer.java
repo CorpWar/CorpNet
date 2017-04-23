@@ -246,7 +246,9 @@ public class PeerToPeer {
     }
 
     public <T> void sendUnreliableObjectToClient(T sendObject, UUID clientID) {
-        sendUnreliableToClient(SerializationUtils.getInstance().serialize(sendObject), clientID);
+        if (peers.containsKey(clientID)) {
+            sendUnreliableToClient(SerializationUtils.getInstance().serialize(sendObject), clientID);
+        }
     }
 
     /**
@@ -255,7 +257,9 @@ public class PeerToPeer {
      * @param clientID
      */
     public void sendUnreliableToClient(byte[] dataToSend, UUID clientID) {
-        peers.get(clientID).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+        if (peers.containsKey(clientID)) {
+            peers.get(clientID).addToSendQue(dataToSend, NetworkSendType.UNRELIABLE_GAME_DATA);
+        }
     }
 
     /**
@@ -299,11 +303,15 @@ public class PeerToPeer {
     }
 
     public <T> void sendReliableObjectToClient(T sendObject, UUID clientID) {
-        sendReliableToClient(SerializationUtils.getInstance().serialize(sendObject), clientID);
+        if (peers.containsKey(clientID)) {
+            sendReliableToClient(SerializationUtils.getInstance().serialize(sendObject), clientID);
+        }
     }
 
     public void sendReliableToClient(byte[] sendObject, UUID clientID) {
-        peers.get(clientID).addToSendQue(sendObject, NetworkSendType.RELIABLE_GAME_DATA);
+        if (peers.containsKey(clientID)) {
+            peers.get(clientID).addToSendQue(sendObject, NetworkSendType.RELIABLE_GAME_DATA);
+        }
     }
 
     /**
