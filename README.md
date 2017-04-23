@@ -22,7 +22,7 @@ You can ether grab it from maven central
 <dependency>
     <groupId>net.corpwar.lib</groupId>
     <artifactId>corpnet</artifactId>
-    <version>1.8.0</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 Or you can head over to [release section](https://github.com/CorpWar/CorpNet/releases) and download the latest version of the jar. Add this to your project and you should be good to go.
